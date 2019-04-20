@@ -2,7 +2,7 @@
 
 set -ueo pipefail
 
-composer_args="-vvv --no-interaction"
+composer_args="--no-interaction"
 composer="composer ${composer_args}"
 
 . ~/init/php 7.3.3
