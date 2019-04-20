@@ -15,5 +15,4 @@ ${composer} archive
 echo AWS Region: ${AWS_REGION}
 echo Bucket: ${BUCKET}
 
-#pip install awscli
-#aws s3 cp *-${version}.tar
+./upload-artifacts.js *-${version}.tar
