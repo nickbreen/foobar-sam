@@ -1,0 +1,3 @@
+{
+  "cmd": ". ~/init/php 7.3.3 && composer --no-interaction install --prefer-dist"
+}
