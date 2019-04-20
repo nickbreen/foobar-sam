@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: LambCI function and supporting services (see github.com/lambci/lambci for documentation)
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: GitHub Configuration
+        Parameters:
+          - GithubToken
+          - GithubSecret
+      - Label:
+          default: Slack Configuration (optional)
+        Parameters:
+          - SlackToken
+          - SlackChannel
+Parameters:
+  GithubToken:
+    Description: GitHub OAuth token
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /github/token
+    NoEcho: true
+#    AllowedPattern: '^$|^[0-9a-f]{40}$'
+#    ConstraintDescription: Must be empty or a 40 char GitHub token
+  GithubSecret:
+    Description: GitHub webhook secret
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /github/secret
+    NoEcho: true
+  SlackToken:
+    Description: (optional) Slack API token
+    Type: String
+    Default: ''
+    NoEcho: true
+#    AllowedPattern: '^$|^xox.-[0-9]+-.+'
+#    ConstraintDescription: 'Must be empty or a valid Slack token, eg: xoxb-1234'
+  SlackChannel:
+    Description: (optional) Slack channel
+    Type: String
+    Default: '#general'
+#    AllowedPattern: '^$|^#.+'
+#    ConstraintDescription: 'Must be empty or a valid Slack channel, eg: #general'
+
+Resources:
+
+  # Uncomment this (and permissions below) to add an SNS topic to publish build statuses to:
+  StatusTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: LambCI
+
+  BuildLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-build
+      Description: !Sub 'LambCI build function for stack: ${AWS::StackName}'
+      Runtime: nodejs8.10
+      CodeUri: {Bucket: {'Fn::Sub': 'lambci-${AWS::Region}'}, Key: fn/lambci-build-0.10.1.zip}
+      Handler: index.handler
+      Timeout: 900
+      MemorySize: 3008
+      Environment:
+        Variables:
+          BUCKET: !Ref BuildResults
+      Events:
+        Webhook:
+          Type: Api
+          Properties:
+            Path: /lambci/webhook
+            Method: POST
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref BuildResults
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConfigTable
+        - Statement:
+            - Action:
+                - dynamodb:GetItem
+                - dynamodb:BatchGetItem
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:BatchWriteItem
+              Effect: Allow
+              Resource:
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BuildsTable}
+                - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BuildsTable}/index/*
+        - LambdaInvokePolicy:
+            FunctionName: !Sub ${AWS::StackName}-build
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref StatusTopic
+
+  BuildResults:
+    Type: AWS::S3::Bucket
+
+  ConfigTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${AWS::StackName}-config
+      PrimaryKey:
+        Name: project
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  BuildsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-builds
+      AttributeDefinitions:
+        - AttributeName: project
+          AttributeType: S
+        - AttributeName: buildNum
+          AttributeType: N
+        - AttributeName: trigger
+          AttributeType: S
+        - AttributeName: commit
+          AttributeType: S
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: project
+          KeyType: HASH
+        - AttributeName: buildNum
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      LocalSecondaryIndexes:
+        - IndexName: trigger
+          KeySchema:
+            - AttributeName: project
+              KeyType: HASH
+            - AttributeName: trigger
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: commit
+          KeySchema:
+            - AttributeName: project
+              KeyType: HASH
+            - AttributeName: commit
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: requestId
+          KeySchema:
+            - AttributeName: project
+              KeyType: HASH
+            - AttributeName: requestId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+
+  ConfigUpdater:
+    Type: Custom::ConfigUpdater
+    DependsOn: ConfigTable
+    Properties:
+      ServiceToken: !GetAtt BuildLambda.Arn
+      GithubToken: !Ref GithubToken
+      GithubSecret: !Ref GithubSecret
+      SlackToken: !Ref SlackToken
+      SlackChannel: !Ref SlackChannel
+      S3Bucket: !Ref BuildResults
+      WebhookUrl: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/lambci/webhook
+
+
+Outputs:
+
+  S3Bucket:
+    Description: Name of the build results S3 bucket, see github.com/lambci/lambci
+    Value: !Ref BuildResults
+
+  WebhookUrl:
+    Description: GitHub webhook URL
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/lambci/webhook
