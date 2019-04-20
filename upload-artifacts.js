@@ -1,7 +1,7 @@
 #!/bin/node
 
 const AWS = require('aws-sdk');
-const fs =  require('fs');
+const fs = require('fs');
 
 const s3 = new AWS.S3();
 
