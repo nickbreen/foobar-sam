@@ -12,12 +12,9 @@ composer = $(docker) composer $(composer_args)
 
 version = $(shell git describe --abbrev=0)
 
-.PHONY: clean update deploy
+.PHONY: buid clean deploy-ci update
 
-foobar-wp-$(version).tar.bz2: foobar-wp-$(version).tar
-	$(bzip2) --keep --force $<
-
-foobar-wp-$(version).tar: composer.lock
+build: composer.lock
 	$(composer) config version $(version)
 	$(composer) config version
 	$(composer) install --prefer-dist
@@ -27,8 +24,8 @@ foobar-wp-$(version).tar: composer.lock
 clean:
 	rm -rf wp wp-content foobar-wp-$(version).tar foobar-wp-$(version).tar.bz2
 
+deploy-ci: build/* ci/*
+	stack=lambci template=ci/lambci.yaml ci/cfn.sh
+
 update: composer.json
 	$(composer) outdated --direct --strict || $(composer) update --prefer-dist
-
-deploy: lambci.yaml
-	stack=lambci template=lambci.yaml ./cfn.sh
