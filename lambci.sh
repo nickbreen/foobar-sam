@@ -12,4 +12,4 @@ ${composer} config version ${version}
 ${composer} install --prefer-dist
 ${composer} archive
 
-./upload-artifacts.js *-${version}.tar
+node ./upload-artifacts.js *-${version}.tar
