@@ -10,19 +10,26 @@ composer_args = -vvv --no-interaction
 
 composer = $(docker) composer $(composer_args)
 
-version = $(shell git describe --abbrev=0)
+version = $(shell git describe | awk -F- '{ \
+	gsub(/^v/, "", $$1); \
+	if ($$2 && $$3) { print $$1 "-" $$2 "." $$3 } \
+	else { print $$1}}')
 
 .PHONY: buid clean deploy-ci update
 
-build: composer.lock
+build: composer.lock composer.json
+	echo $(version)
+	exit 1
+	mkdir -p out
+	cp -t out/ $^
+	cd out
 	$(composer) config version $(version)
 	$(composer) config version
 	$(composer) install --prefer-dist
 	$(composer) archive
-	git checkout composer.json
 
 clean:
-	rm -rf wp wp-content foobar-wp-$(version).tar foobar-wp-$(version).tar.bz2
+	rm -rf out/
 
 deploy-ci: build/* ci/*
 	stack=lambci template=ci/lambci.yaml ci/cfn.sh
