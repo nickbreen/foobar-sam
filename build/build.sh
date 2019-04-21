@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ueo pipefail
+set -ueo pipefail -v
 
 trap 'printenv' EXIT
 
@@ -11,8 +11,11 @@ composer="composer ${composer_args}"
 
 version=$(git describe | awk -F- '{ \
 	gsub(/^v/, "", $1); \
-	if ($$2 && $3) { print $1 "+" $2 "." $3 } \
-	else { print $1}}').b${LAMBCI_BUILD_NUM}
+	if ($2 && $3) \
+	{ print $1 "+" $2 "." $3 } \
+	else \
+	{ print $1} \
+	}').b${LAMBCI_BUILD_NUM}
 
 mkdir -p out
 
