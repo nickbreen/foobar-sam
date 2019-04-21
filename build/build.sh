@@ -17,9 +17,11 @@ version=$(git describe | awk -F- '{ \
 	{ print $1} \
 	}').b${LAMBCI_BUILD_NUM}
 
+echo Version: ${version}
+
 mkdir -p out
 
-cp -t out/ composer.json composer.lock
+cp --remove-destination --target-directory=out/ composer.json composer.lock
 ${composer} install --working-dir=out/ --prefer-dist
 ${composer} config version --working-dir=out/ ${version}
 ${composer} update --working-dir=out/ --lock
