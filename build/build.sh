@@ -13,11 +13,11 @@ ${composer} config version ${version}
 ${composer} install --prefer-dist
 ${composer} archive
 
-declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUMBER
+declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
 
 (
     cd build
     npm install
 )
-key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUMBER}
+key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
 node build/upload-artifacts.js ${BUCKET} ${key} *-${version}.tar
