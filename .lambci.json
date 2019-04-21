@@ -2,7 +2,7 @@
   "cmd": ". ~/init/php 7.3.3 && build/build.sh",
   "branches": {
     "master": true,
-    "/tags/v\\d+\\.\\d+\\.\\d+$": true
+    "refs/tags/v\\d+\\.\\d+\\.\\d+$": true
   },
   "git": {
     "depth": 100

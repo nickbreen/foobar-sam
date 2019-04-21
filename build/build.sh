@@ -9,19 +9,22 @@ declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
 composer_args="--no-interaction"
 composer="composer ${composer_args}"
 
-git_version=$(git describe)
-git_tag=${git_version%%-*}
-git_pre=${git_version#*-}
+version=$(git describe | awk -F- '{ \
+	gsub(/^v/, "", $$1); \
+	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
+	else { print $$1}}').b${LAMBCI_BUILD_NUM}
 
-version="${git_tag#v}${git_pre+-${git_pre/-/.}}${LAMBCI_BUILD_NUM++b${LAMBCI_BUILD_NUM}}"
+mkdir -p out
 
-${composer} config version ${version}
-${composer} install --prefer-dist
-${composer} archive
-
+cp -t out/ composer.json composer.lock
+${composer} install --working-dir=out/ --prefer-dist
+${composer} config version --working-dir=out/ ${version}
+${composer} archive --working-dir=out/ --format=zip
 (
     cd build
     npm install
 )
 key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
-node build/upload-artifacts.js ${BUCKET} ${key} *-${version}.tar
+node build/upload-artifacts.js ${BUCKET} ${key} out/*.zip
+
+which make

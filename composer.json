@@ -19,10 +19,17 @@
     "sort-packages": true
   },
   "archive": {
-    "exclude": [ "*" ,"!wp/", "!wp-content/", "!wp-config.php"]
+    "exclude": [
+      "*" ,
+      "!index.php",
+      "!wp-config.php",
+      "!wp/",
+      "wp/wp-content/",
+      "!wp-content/"
+    ]
   },
   "require": {
-    "php": ">=7.3.3",
+    "php": ">=7.3.0",
     "johnpbloch/wordpress": "5.1.1"
   },
   "require-dev": {
@@ -38,6 +45,5 @@
   },
   "extra": {
     "wordpress-install-dir": "wp"
-  },
-  "version": "v0.0.0"
+  }
 }
