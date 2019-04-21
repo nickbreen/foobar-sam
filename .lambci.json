@@ -3,5 +3,8 @@
   "branches": {
     "master": true,
     "/tags/v\\d+\\.\\d+\\.\\d+$": true
+  },
+  "git": {
+    "depth": 100
   }
 }
