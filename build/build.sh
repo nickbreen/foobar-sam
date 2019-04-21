@@ -2,7 +2,7 @@
 
 set -ueo pipefail
 
-trap 'printenv' ERR
+trap 'printenv; which make' EXIT
 
 declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
 
@@ -27,5 +27,3 @@ ${composer} archive --working-dir=out/ --format=zip
 )
 key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
 node build/upload-artifacts.js ${BUCKET} ${key} out/*.zip
-
-which make
