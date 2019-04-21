@@ -8,5 +8,7 @@
 # Local Build
 
     make
+    
+**TODO**: Use https://github.com/lambci/docker-lambda
 
 

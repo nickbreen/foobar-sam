@@ -12,7 +12,4 @@ ${composer} config version ${version}
 ${composer} install --prefer-dist
 ${composer} archive
 
-echo AWS Region: ${AWS_REGION}
-echo Bucket: ${BUCKET}
-
 ./upload-artifacts.js *-${version}.tar
