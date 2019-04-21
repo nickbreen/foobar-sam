@@ -19,6 +19,7 @@ mkdir -p out
 cp -t out/ composer.json composer.lock
 ${composer} install --working-dir=out/ --prefer-dist
 ${composer} config version --working-dir=out/ ${version}
+${composer} update --working-dir=out/ --lock
 ${composer} archive --working-dir=out/ --format=zip
 (
     cd build
