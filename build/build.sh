@@ -17,5 +17,6 @@ declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUMBER
     cd build
     npm install
 )
+env
 key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUMBER}
 node build/upload-artifacts.js ${BUCKET} ${key} *-${version}.tar
