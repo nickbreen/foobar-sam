@@ -1,3 +1,7 @@
 {
-  "cmd": "./lambci.sh"
+  "cmd": "./lambci.sh",
+  "branches": {
+    "master": true,
+    "/tags/v\\d+\\.\\d+\\.\\d+$": true
+  }
 }
