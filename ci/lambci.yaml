@@ -52,10 +52,12 @@ Resources:
   BuildLambda:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-build
+      FunctionName: !Sub '${AWS::StackName}-build'
       Description: !Sub 'LambCI build function for stack: ${AWS::StackName}'
       Runtime: nodejs8.10
-      CodeUri: {Bucket: {'Fn::Sub': 'lambci-${AWS::Region}'}, Key: fn/lambci-build-0.10.1.zip}
+      CodeUri:
+        Bucket: !Sub 'lambci-${AWS::Region}'
+        Key: fn/lambci-build-0.10.1.zip
       Handler: index.handler
       Timeout: 900
       MemorySize: 3008
@@ -69,6 +71,8 @@ Resources:
             Path: /lambci/webhook
             Method: POST
       Policies:
+        - S3FullAccessPolicy:
+            BucketName: wp.foobar.nz
         - S3FullAccessPolicy:
             BucketName: !Ref BuildResults
         - DynamoDBCrudPolicy:

@@ -15,7 +15,6 @@ declare stack
 
 export TMPDIR=.
 
-tmp_caps=$(mktemp --suffix ${stack}.caps)
 tmp_template=$(mktemp --suffix ${stack}.template)
 
 err()
@@ -26,19 +25,19 @@ err()
 }
 
 trap "err ${stack}" ERR
-trap "rm ${tmp_caps} ${tmp_template}" EXIT
+trap "rm ${tmp_template}" EXIT
 
 echo -ne "${yellow}${stack}${nc}: validating templates: "
 for t in $template
 do
-    err=$(aws cloudformation validate-template --template-body file://${t} --output text 2>&1 | tee -a ${tmp_caps})
+    err=$(aws cloudformation validate-template --template-body file://${t} --output text 2>&1)
     errno=$?
     if test ${errno} -eq 0
     then echo -ne "${green}$t${nc} "
     else echo -e "${red}$t${nc}"; echo ${err}; exit ${errno}
     fi
 done && echo
-caps="CAPABILITY_IAM $(sed -n '/^CAPABILITIES\s*/{s/CAPABILITIES\s*//; p}' ${tmp_caps} | sort -u | tr $'\n' ' ')"
+caps="CAPABILITY_IAM"
 declare region
 declare bucket
 aws ${region:+--region $region} cloudformation package \

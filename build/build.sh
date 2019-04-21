@@ -2,7 +2,7 @@
 
 set -ueo pipefail
 
-trap 'printenv; which make' EXIT
+trap 'printenv' EXIT
 
 declare LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
 
