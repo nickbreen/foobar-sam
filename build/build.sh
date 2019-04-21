@@ -4,7 +4,7 @@ set -ueo pipefail
 
 trap 'printenv; which make' EXIT
 
-declare BUCKET LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
+declare LAMBCI_REPO LAMBCI_BRANCH LAMBCI_BUILD_NUM
 
 composer_args="--no-interaction"
 composer="composer ${composer_args}"
@@ -26,4 +26,4 @@ ${composer} archive --working-dir=out/ --format=zip
     npm install
 )
 key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
-node build/upload-artifacts.js ${BUCKET} ${key} out/*.zip
+node build/upload-artifacts.js wp.foobar.nz ${key} out/*.zip
