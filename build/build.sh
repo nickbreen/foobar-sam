@@ -30,5 +30,8 @@ ${composer} archive --working-dir=out/ --format=zip
     cd build
     npm install
 )
-key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
-node build/upload-artifacts.js wp.foobar.nz ${key} out/*.zip
+#key=artifacts/${LAMBCI_REPO}/${LAMBCI_BRANCH}/${LAMBCI_BUILD_NUM}
+#node build/upload-artifacts.js s3 wp.foobar.nz ${key} out/*.zip
+
+name=$(${composer} config name --working-dir=out/ )
+node build/upload-artifacts.js layer ${name} out/*.zip

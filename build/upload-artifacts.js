@@ -34,11 +34,45 @@ class UploadArtifacts
     }
 }
 
+class PublishLayer
+{
+    lambda;
+    constructor(lambda)
+    {
+        this.lambda = lambda;
+    }
+
+    async publishLayer(layerName, zip)
+    {
+        return lambda.publishLayerVersion(
+            {
+                LayerName: layerName,
+                ZipFile: fs.createReadStream(zip)
+            }).promise();
+    }
+}
+
 module.exports = exports = UploadArtifacts;
 
 if (require.main === module)
 {
-    program.arguments('<bucket> <prefix> <artifacts...>')
+    program
+        .command('layer <name> <zip>')
+        .action((name, zip) =>
+        {
+            new PublishLayer(new AWS.Lambda())
+                .publishLayer(name, zip)
+                .catch(e =>
+                {
+                    conole.error(e);
+                    process.exit(EX_GENERAL);
+                })
+                .then(r =>
+                {
+                    console.debug(r);
+                })
+        })
+        .command('s3 <bucket> <prefix> <artifacts...>')
         .action((bucket, prefix, artifacts) =>
         {
             new UploadArtifacts(new AWS.S3())

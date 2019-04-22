@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: PHP Lambda
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  WordPress:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-wp
+      CodeUri: ../out/wp
+      Runtime: provided
+      Handler: index.php
+      MemorySize: 3008
+      Timeout: 30
+      Tracing: Active
+      Layers:
+        - !Ref LayerPHP
+        - !Ref LayerWordPress
+      Environment:
+        Variables:
+          SomeVar: some-var
+          SOME_VAR: some var
+      Events:
+        RootAPI:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+        API:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+  LayerWordPress:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: WordPress
+      Description: WordPress
+      ContentUri: ../out/layer-wp.zip
+
+  LayerPHP:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: PHP
+      Description: PHP Runtime
+      ContentUri: ../out/layer-php.zip
+
+Outputs:
+  Endpoint:
+    Description: "Endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+
