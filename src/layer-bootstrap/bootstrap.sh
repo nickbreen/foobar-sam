@@ -33,11 +33,7 @@ echo LAMBDA_TASK_ROOT:${LAMBDA_TASK_ROOT}
 find ${LAMBDA_TASK_ROOT} ${LAMBDA_RUNTIME_DIR} /opt -name wp-content -prune -o -name wp -prune -o -executable -print
 
 php=$(PATH="/opt/usr/bin:$PATH" which php)
-
-${php} -i >&2
-declare PHP_MINOR_VERSION=$(${php} -r 'print PHP_MINOR_VERSION')
-
-pid_file=/run/user/${PID}/php.pid
+pid_file=/tmp/php.pid
 
 start_webserver()
 {
@@ -45,7 +41,7 @@ start_webserver()
     IFS=/ read -ra handler_components <<< ${_HANDLER};
     handler_file=$(basename ${_HANDLER});
     handler_dir=$(dirname ${_HANDLER});
-    php -t ${handler_dir} -S localhost:8000 ${handler_file} &
+    ${php} -t ${handler_dir} -S localhost:8000 ${handler_file} &
     echo $! > ${pid_file}
 }
 
@@ -65,7 +61,9 @@ do
     headers=$(mktemp)
     entity=$(mktemp)
     # GET http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
-    curl -fLD ${headers} -o ${entity} http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
+    curl -sSfLD ${headers} -o ${entity} http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
+
+    cat ${headers} ${entity}
 
     invocation_id=$(sed -n '/^lambda-runtime-aws-request-id/Is/.*:\s*//' ${headers})
     # get lambda-runtime-aws-request-id header!
@@ -74,6 +72,6 @@ do
     # re-assemble request headers
     # proxy request to php server
     # POST http://$AWS_LAMBDA_RUNTIME_API/2018-06-01/runtime/invocation/$invocation_id/response
-    curl -f --data=@${headers} --data-raw="\n\n" --data=@${entity} http://$AWS_LAMBDA_RUNTIME_API/2018-06-01/runtime/invocation/$invocation_id/response
+    curl -sSf --data=@${headers} --data-raw="\n\n" --data=@${entity} http://$AWS_LAMBDA_RUNTIME_API/2018-06-01/runtime/invocation/$invocation_id/response
 done
 

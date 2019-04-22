@@ -7,15 +7,17 @@ Resources:
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
       CodeUri: ../out/wp
-      Runtime: provided
-      Handler: index.php
+#      Runtime: provided
+#      Handler: index.php
+      Runtime: nodejs8.10
+      Handler: index.handler
       MemorySize: 3008
       Timeout: 30
       Tracing: Active
       Layers:
         - !Ref LayerPHP
         - !Ref LayerWordPress
-        - !Ref LayerBootstrap
+#        - !Ref LayerBootstrap
       Environment:
         Variables:
           SomeVar: some-var

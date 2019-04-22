@@ -1,0 +1,15 @@
+{
+  "name": "wp",
+  "dependencies": {
+    "http-proxy": "*"
+  },
+  "devDependencies": {
+    "aws-sdk": "*"
+  },
+  "files": [
+    "index.js"
+  ],
+  "engines": {
+    "node": "~8.10"
+  }
+}

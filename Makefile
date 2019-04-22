@@ -17,15 +17,17 @@ version = $(shell git describe | awk -F- '{ \
 
 .PHONY: archive build clean outdated sam-deploy update test
 
-build: out/sam.yaml out/wp out/layer-wp out/layer-php out/layer-bootstrap
-
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
 
-out/wp: src/wp/*
+out/sam.yaml: src/sam.yaml out/layer-php out/layer-wp out/layer-bootstrap out/wp
+	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
+
+out/wp: src/wp/package.json src/wp/index.js
 	rm -rf $@
 	mkdir $@
 	cp -t $@ $^
+	npm --cache .cache.npm --prefix $@ install --only=production
 
 out/layer-wp: src/layer-wp/*
 	rm -rf $@
@@ -47,9 +49,6 @@ out/layer-bootstrap: src/layer-bootstrap/bootstrap.sh
 	cp $< $@/bootstrap
 	chmod +x $@/bootstrap
 
-out/sam.yaml: src/sam.yaml out/layer-php out/layer-wp out/layer-bootstrap out/wp
-	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
-
 clean:
 	rm -rf out/*
 
@@ -66,6 +65,7 @@ $(addprefix src/layer-php/,libtidy-0.99.tgz libmcrypt-4.4.8.tgz php-7.3.3.tgz):
 
 url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
-
+#test: start_time = $(shell date '+%F %T')
 test:
-	curl -sSf $(url) $(url)home $(url)license.txt
+	curl -f $(url) $(url)home #$(url)license.txt
+#	sam logs --name WordPress --stack-name sam-wp --start-time "$(start_time)"
