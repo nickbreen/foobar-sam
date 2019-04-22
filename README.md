@@ -30,6 +30,7 @@ Then any push to master or a tag will trigger CI.
 # PHP
 
 - [Required PHP extensions](https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
+- Compile in docker with with [amazonlinux:1-wth-sources](https://hub.docker.com/_/amazonlinux)
 
 
 # Structure

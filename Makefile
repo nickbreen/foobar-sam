@@ -17,7 +17,7 @@ version = $(shell git describe | awk -F- '{ \
 
 .PHONY: archive build clean outdated sam-deploy update test
 
-build: out/sam.yaml out/wp out/layer-wp.zip out/layer-php.zip
+build: out/sam.yaml out/wp out/layer-wp out/layer-php out/layer-bootstrap
 
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
@@ -34,21 +34,20 @@ out/layer-wp: src/layer-wp/*
 	$(composer) install --working-dir=$@ --prefer-dist
 	$(composer) config --working-dir=$@ version $(version)
 
-out/layer-wp.zip: out/layer-wp
-	$(composer) archive --working-dir=$< --format=zip --dir=.. --file=$(basename $(@F))
+out/layer-php: src/layer-php/*
+	rm -rf $@
+	mkdir -p $@/lib
+	tar xf src/layer-php/libmcrypt-4.4.8.tgz --directory=$@/lib --strip-components=2
+	tar xf src/layer-php/libtidy-0.99.tgz --directory=$@/lib --strip-components=2
+	tar xf src/layer-php/php-7.3.3.tgz --directory=$@ --strip-components=1
 
-out/layer-php: $(addprefix src/layer-php/,bootstrap libmcrypt-4.4.8.tgz libtidy-0.99.tgz php-7.3.3.tgz)
+out/layer-bootstrap: src/layer-bootstrap/bootstrap.sh
 	rm -rf $@
 	mkdir -p $@
-	cp -t $@ $<
-	tar xf src/layer-php/libmcrypt-4.4.8.tgz --directory=$@
-	tar xf src/layer-php/libtidy-0.99.tgz --directory=$@
-	tar xf src/layer-php/php-7.3.3.tgz --directory=$@/usr --strip-components=1
+	cp $< $@/bootstrap
+	chmod +x $@/bootstrap
 
-out/layer-php.zip: out/layer-php
-	cd $<; zip -r $(realpath $@) usr bootstrap
-
-out/sam.yaml: src/sam.yaml out/layer-php.zip out/layer-wp.zip out/wp
+out/sam.yaml: src/sam.yaml out/layer-php out/layer-wp out/layer-bootstrap out/wp
 	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
 
 clean:
@@ -69,4 +68,4 @@ url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
 
 test:
-	curl $(url) $(url)home $(url)license.txt
+	curl -sSf $(url) $(url)home $(url)license.txt

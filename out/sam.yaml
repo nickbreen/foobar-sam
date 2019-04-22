@@ -7,7 +7,7 @@ Resources:
     Properties:
       FunctionName:
         Fn::Sub: ${AWS::StackName}-wp
-      CodeUri: s3://wp.foobar.nz/f33955ab820f313b79b5ee57fdeea673
+      CodeUri: s3://wp.foobar.nz/5d33bd47f8ad48607bda8503365134b7
       Runtime: provided
       Handler: index.php
       MemorySize: 3008
@@ -16,6 +16,7 @@ Resources:
       Layers:
       - Ref: LayerPHP
       - Ref: LayerWordPress
+      - Ref: LayerBootstrap
       Environment:
         Variables:
           SomeVar: some-var
@@ -36,13 +37,19 @@ Resources:
     Properties:
       LayerName: WordPress
       Description: WordPress
-      ContentUri: s3://wp.foobar.nz/5bf5fac056e20c7570bbc7a2a6604854
+      ContentUri: s3://wp.foobar.nz/8a22c9fdc164d9c858c004c3656ff532
   LayerPHP:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: PHP
       Description: PHP Runtime
-      ContentUri: s3://wp.foobar.nz/1ed37c7f982213b887e4f5cfd6db67c0
+      ContentUri: s3://wp.foobar.nz/448233aab7f2fbb23588dc04f477c8c5
+  LayerBootstrap:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: Bootstrap
+      Description: Proxies to PHP built-in web server
+      ContentUri: s3://wp.foobar.nz/157d155cda027385e875ed7a6a471090
 Outputs:
   Endpoint:
     Description: Endpoint

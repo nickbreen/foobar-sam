@@ -24,7 +24,7 @@ function start_webserver() {
       $handler_filename = array_pop($handler_components);
       $handler_path = implode('/', array_merge(['/var/task'], $handler_components));
       chdir($handler_path);
-      exec("PHP_INI_SCAN_DIR=/opt/etc/php-7.${phpMinorVersion}.d/:/var/task/php-7.${phpMinorVersion}.d/ php -S localhost:8000 -c /var/task/php.ini -d extension_dir=/opt/lib/php/7.${phpMinorVersion}/modules '$handler_filename'");
+      exec("php -S localhost:8000 $handler_filename");
       exit;
 
     default:

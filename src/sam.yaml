@@ -15,6 +15,7 @@ Resources:
       Layers:
         - !Ref LayerPHP
         - !Ref LayerWordPress
+        - !Ref LayerBootstrap
       Environment:
         Variables:
           SomeVar: some-var
@@ -36,14 +37,21 @@ Resources:
     Properties:
       LayerName: WordPress
       Description: WordPress
-      ContentUri: ../out/layer-wp.zip
+      ContentUri: ../out/layer-wp
 
   LayerPHP:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: PHP
       Description: PHP Runtime
-      ContentUri: ../out/layer-php.zip
+      ContentUri: ../out/layer-php
+
+  LayerBootstrap:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: Bootstrap
+      Description: Proxies to PHP built-in web server
+      ContentUri: ../out/layer-bootstrap
 
 Outputs:
   Endpoint:
