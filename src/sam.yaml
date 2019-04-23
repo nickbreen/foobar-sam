@@ -11,8 +11,8 @@ Resources:
 #      Handler: index.php
       Runtime: nodejs8.10
       Handler: index.handler
-      MemorySize: 3008
-      Timeout: 30
+      MemorySize: 256
+      Timeout: 5
       Tracing: Active
       Layers:
         - !Ref LayerPHP

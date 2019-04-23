@@ -1,10 +1,12 @@
 {
   "name": "wp",
-  "dependencies": {
-    "http-proxy": "*"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "aws-sdk": "*"
+    "http": "*",
+    "child_process": "*",
+    "aws-sdk": "*",
+    "url": "*",
+    "querystring": "*"
   },
   "files": [
     "index.js"
