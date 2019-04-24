@@ -19,7 +19,7 @@ out = out
 src = src
 
 
-.PHONY: archive build clean outdated sam-deploy update test
+.PHONY: archive build clean outdated sam-deploy update test int acc til
 
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
@@ -64,28 +64,24 @@ update: $(out)/layer-wp
 $(addprefix $(src)/layer-php/,libtidy-0.99.tgz libmcrypt-4.4.8.tgz php-7.3.3.tgz):
 	wget --no-verbose --timestamping --directory-prefix=$(@D) https://lambci.s3.amazonaws.com/binaries/$(@F)
 
-live_url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
-	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
-local_url = http://localhost:3000/
-test: $(out)/test
-$(out)/test: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp $(src)/sam.yaml FORCE
-	rm -rf $@; mkdir -p $@
-	@if ! curl -sf $(local_url); then echo Start the SAM Local API; \
-		echo sam local start-api \
-				--host localhost \
-				--port 3000 \
-				--template $(src)/sam.yaml \
-				--docker-volume-basedir src \
-				--log-file $@/sam.log \
-				--layer-cache-basedir $@/sam.layer.cache \
-				--region ap-southeast-2; \
-		read ARG; \
-	fi
+test: int
 
-	curl -vf -T src/test/some.json $(local_url)some.json \
-			$(local_url)license.txt \
-			$(local_url)readme.html \
-			$(local_url)?q=hello \
-			"$(local_url)home?p=v1&p=v2&x&y=1"
+int: $(out)/test/int
+$(out)/test/int: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp $(src)/sam.yaml FORCE
+	rm -rf $@; mkdir -p $@
+	sam local generate-event apigateway aws-proxy | sam local invoke -t src/sam.yaml WordPress | jq . > $@/invoke.out
+	jq -r .body < $@/invoke.out | jq . | tee $@/invoke.body.out
+
+acc: $(out)/test/acc
+$(out)/test/acc: $(src)/test $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
+	rm -rf $@; mkdir -p $@
+	$(src)/test/test.sh -P $(realpath $(src)) -o $@ -s $(realpath $<) -t $(realpath $(src)/sam.yaml)
+
+til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
+	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
+til: $(out)/test/til
+$(out)/test/til: $(src)/test $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
+	rm -rf $@; mkdir -p $@
+	$(src)/test/test.sh -P $(realpath $(src)) -o $@ -s $(realpath $<) -t $(realpath $(src)/sam.yaml) -u $(url)
 
 FORCE:
