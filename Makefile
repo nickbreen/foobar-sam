@@ -85,11 +85,9 @@ $(out)/test/int: $(src)/sam.yaml build FORCE
 	rm -rf $@; mkdir -p $@
 	sam local generate-event apigateway aws-proxy | tee /dev/stderr |\
 			sam local invoke --template src/sam.yaml\
-					--docker-volume-basedir .\
-					--log-file $@/sam.log\
+					--docker-volume-basedir $(src)\
 					--layer-cache-basedir $@/sam.layer.cache\
 					WordPress | tee $@/invoke.out >&2
-	cat $@/sam.log >&2
 
 acc: $(out)/test/acc
 $(out)/test/acc: $(src)/test $(src)/sam.yaml build FORCE

@@ -6,7 +6,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
-      CodeUri: out/func-sh
+      CodeUri: ../out/func-sh
       Runtime: provided
       Handler: handler.sh:handler
 #      Handler: index.php
@@ -40,21 +40,21 @@ Resources:
     Properties:
       LayerName: WordPress
       Description: WordPress
-      ContentUri: out/layer-wp
+      ContentUri: ../out/layer-wp
 
   LayerPHP:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: PHP
       Description: PHP Runtime
-      ContentUri: out/layer-php
+      ContentUri: ../out/layer-php
 
   LayerBootstrap:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: Bootstrap
       Description: Proxies to PHP built-in web server
-      ContentUri: out/layer-bootstrap
+      ContentUri: ../out/layer-bootstrap
 
 Outputs:
   Endpoint:
