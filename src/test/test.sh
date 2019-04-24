@@ -23,10 +23,10 @@ if [ ! ${url-} ]
 then
     url=http://${host}:${port}/
     sam local start-api \
-            --host ${host} \
-            --port ${port} \
-            --template ${template} \
-            --docker-volume-basedir ${project} \
+            ${host+--host ${host}} \
+            ${port+--port ${port}} \
+            ${template+--template ${template}} \
+            ${project+--docker-volume-basedir ${project}} \
             --log-file ${out}/sam.log \
             --layer-cache-basedir ${out}/sam.layer.cache \
             --region ap-southeast-2 > ${out}/stdout.log 2> ${out}/stderr.log &

@@ -3,7 +3,7 @@ bzip2 = lbzip2
 
 docker = docker run --rm \
          	--mount type=bind,src=$(realpath .),dst=/app \
-         	--mount type=bind,src=$(realpath .cache),dst=/tmp/cache \
+         	--env COMPOSER_CACHE_DIR=/app/$(cache)/composer \
          	--user $$(id -u):$$(id -g)
 
 composer_args = --no-interaction
@@ -15,11 +15,13 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
+cache = .cache
 out = out
 src = src
 
+.PHONY: archive build clean outdated update test int acc til
 
-.PHONY: archive build clean outdated sam-deploy update test int acc til
+build: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
 
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
@@ -30,7 +32,7 @@ $(out)/sam.yaml: $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-b
 $(out)/wp: $(src)/wp/index.php $(src)/wp/package.json $(src)/wp/index.js
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
-	npm --cache .cache.npm --prefix $@ install --only=production
+	npm --cache $(cache)/npm --prefix $@ install --only=production
 
 $(out)/layer-wp: $(src)/layer-wp/*
 	rm -rf $@; mkdir $@
@@ -53,9 +55,13 @@ $(out)/layer-bootstrap: $(src)/layer-bootstrap/bootstrap.php
 clean:
 	rm -rf $(out)/*
 
-outdated: $(src)/layer-wp.outdated
+outdated: $(src)/layer-wp.outdated $(src)/wp.outdated
+
 $(out)/layer-wp.outdated: $(out)/layer-wp
-	$(composer) outdated --working-dir=$< --direct --strict | tee -a $@
+	$(composer) outdated --working-dir=$< --direct --strict | tee $@
+
+$(out)/wp.outdated: $(out)/wp
+	npm outdated --prefix=$< | tee $@
 
 update: $(out)/layer-wp
 	$(composer) update --working-dir=$< --prefer-dist
@@ -69,7 +75,14 @@ test: int
 int: $(out)/test/int
 $(out)/test/int: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp $(src)/sam.yaml FORCE
 	rm -rf $@; mkdir -p $@
-	sam local generate-event apigateway aws-proxy | sam local invoke -t src/sam.yaml WordPress | jq . > $@/invoke.out
+	sam local generate-event apigateway aws-proxy |\
+			sam local invoke --template src/sam.yaml\
+					--debug-port 3500\
+					--docker-volume-basedir .\
+					--log-file $@/sam.log\
+					--layer-cache-basedir $@/sam.layer.cache\
+					WordPress |\
+			jq . > $@/invoke.out
 	jq -r .body < $@/invoke.out | jq . | tee $@/invoke.body.out
 
 acc: $(out)/test/acc
