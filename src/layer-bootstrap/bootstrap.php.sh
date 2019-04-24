@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-set -xveuo pipefail
+set -xeuo pipefail
 
 # AWS Lambda Environment Variables, per https://docs.aws.amazon.com/lambda/latest/dg/lambda-environment-variables.html
 declare _HANDLER # The handler location configured on the function.
@@ -25,19 +25,51 @@ declare PYTHONPATH #(Python) $LAMBDA_RUNTIME_DIR.
 declare GEM_PATH #(Ruby) $LAMBDA_TASK_ROOT/vendor/bundle/ruby/2.5.0:/opt/ruby/gems/2.5.0.
 declare AWS_LAMBDA_RUNTIME_API # (custom runtime) The host and port of the runtime API.
 
-source "${LAMBDA_TASK_ROOT}/${_HANDLER%:*}"
+echo _HANDLER:${_HANDLER}
+echo AWS_EXECUTION_ENV:${AWS_EXECUTION_ENV:-N/A}
+echo LAMBDA_RUNTIME_DIR:${LAMBDA_RUNTIME_DIR}
+echo LAMBDA_TASK_ROOT:${LAMBDA_TASK_ROOT}
+
+php=$(PATH="/opt/usr/bin:$PATH" which php)
+pid_file=/tmp/php.pid
+
+start_webserver()
+{
+    declare handler_file handler_dir
+    IFS=/ read -ra handler_components <<< ${_HANDLER};
+    handler_file=$(basename ${_HANDLER});
+    handler_dir=$(dirname ${_HANDLER});
+    ${php} -t ${handler_dir} -S localhost:8000 ${handler_file} &
+    echo $! > ${pid_file}
+}
+
+stop_webserver()
+{
+    kill $(<${pid_file}) && rm ${pid_file}
+}
+
+trap 'stop_webserver' EXIT
+
+# TODO fetch SSM Params needed by WP!
+
+start_webserver
 
 while true
 do
-  HEADERS="$(mktemp)"
-  REQUEST="$(mktemp)"
-  RESPONSE="$(mktemp)"
-  curl -fsS -LD "${HEADERS}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next" -o "${REQUEST}"
+    headers=$(mktemp)
+    entity=$(mktemp)
+    # GET http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
+    curl -sSfLD ${headers} -o ${entity} http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
 
-  REQUEST_ID=$(sed -n -E '/Lambda-Runtime-Aws-Request-Id/I s/^.*:\s*([-[:xdigit:]]+).*$/\1/ p' "${HEADERS}")
-  test "${REQUEST_ID}"
+    cat ${headers} ${entity}
 
-  "${_HANDLER#*:}" < "${REQUEST}" > "${RESPONSE}"
-
-  curl "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${REQUEST_ID}/response" -d "@${RESPONSE}"
+    invocation_id=$(sed -n '/^lambda-runtime-aws-request-id/Is/.*:\s*//' ${headers})
+    # get lambda-runtime-aws-request-id header!
+    # decode json
+    # assemble root-relative URI from request (i.e. /foo/bar?fiz=faz
+    # re-assemble request headers
+    # proxy request to php server
+    # POST http://$AWS_LAMBDA_RUNTIME_API/2018-06-01/runtime/invocation/$invocation_id/response
+    curl -sSf --data=@${headers} --data-raw="\n\n" --data=@${entity} http://$AWS_LAMBDA_RUNTIME_API/2018-06-01/runtime/invocation/$invocation_id/response
 done
+

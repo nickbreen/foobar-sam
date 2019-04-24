@@ -19,17 +19,25 @@ cache = .cache
 out = out
 src = src
 
-.PHONY: archive build clean outdated update test int acc til
+.PHONY: build clean outdated update test int acc til
 
-build: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
+build: $(addprefix $(out)/layer-,php wp bootstrap) $(addprefix $(out)/func-,js sh php) FORCE
 
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
 
-$(out)/sam.yaml: $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp
+$(out)/sam.yaml: $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/func-sh
 	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
 
-$(out)/wp: $(src)/wp/index.php $(src)/wp/package.json $(src)/wp/index.js
+$(out)/func-php: $(src)/func-php/index.php
+	rm -rf $@; mkdir $@
+	cp -t $@ $^
+
+$(out)/func-sh: $(src)/func-sh/handler.sh
+	rm -rf $@; mkdir $@
+	cp -t $@ $^
+
+$(out)/func-js: $(src)/func-js/index.js $(src)/func-js/package.json
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	npm --cache $(cache)/npm --prefix $@ install --only=production
@@ -47,7 +55,7 @@ $(out)/layer-php: $(src)/layer-php/*
 	tar xf $(src)/layer-php/php-7.3.3.tgz --directory=$@ --strip-components=1
 	cp -r -t $@ $(src)/layer-php/etc
 
-$(out)/layer-bootstrap: $(src)/layer-bootstrap/bootstrap.php
+$(out)/layer-bootstrap: $(src)/layer-bootstrap/bootstrap.sh
 	rm -rf $@; mkdir -p $@
 	cp $< $@/bootstrap
 	chmod +x $@/bootstrap
@@ -55,12 +63,12 @@ $(out)/layer-bootstrap: $(src)/layer-bootstrap/bootstrap.php
 clean:
 	rm -rf $(out)/*
 
-outdated: $(src)/layer-wp.outdated $(src)/wp.outdated
+outdated: $(src)/layer-wp.outdated $(src)/func-js.outdated
 
 $(out)/layer-wp.outdated: $(out)/layer-wp
 	$(composer) outdated --working-dir=$< --direct --strict | tee $@
 
-$(out)/wp.outdated: $(out)/wp
+$(out)/func-js.outdated: $(out)/func-js
 	npm outdated --prefix=$< | tee $@
 
 update: $(out)/layer-wp
@@ -73,27 +81,25 @@ $(addprefix $(src)/layer-php/,libtidy-0.99.tgz libmcrypt-4.4.8.tgz php-7.3.3.tgz
 test: int
 
 int: $(out)/test/int
-$(out)/test/int: $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp $(src)/sam.yaml FORCE
+$(out)/test/int: $(src)/sam.yaml build FORCE
 	rm -rf $@; mkdir -p $@
-	sam local generate-event apigateway aws-proxy |\
+	sam local generate-event apigateway aws-proxy | tee /dev/stderr |\
 			sam local invoke --template src/sam.yaml\
-					--debug-port 3500\
 					--docker-volume-basedir .\
 					--log-file $@/sam.log\
 					--layer-cache-basedir $@/sam.layer.cache\
-					WordPress |\
-			jq . > $@/invoke.out
-	jq -r .body < $@/invoke.out | jq . | tee $@/invoke.body.out
+					WordPress | tee $@/invoke.out >&2
+	cat $@/sam.log >&2
 
 acc: $(out)/test/acc
-$(out)/test/acc: $(src)/test $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
+$(out)/test/acc: $(src)/test $(src)/sam.yaml build FORCE
 	rm -rf $@; mkdir -p $@
 	$(src)/test/test.sh -P $(realpath $(src)) -o $@ -s $(realpath $<) -t $(realpath $(src)/sam.yaml)
 
 til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
 til: $(out)/test/til
-$(out)/test/til: $(src)/test $(src)/sam.yaml $(out)/layer-php $(out)/layer-wp $(out)/layer-bootstrap $(out)/wp FORCE
+$(out)/test/til: $(src)/test $(src)/sam.yaml build FORCE
 	rm -rf $@; mkdir -p $@
 	$(src)/test/test.sh -P $(realpath $(src)) -o $@ -s $(realpath $<) -t $(realpath $(src)/sam.yaml) -u $(url)
 
