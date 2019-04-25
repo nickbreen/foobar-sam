@@ -29,7 +29,7 @@
     ]
   },
   "require": {
-    "php": "^7.0.0",
+    "php": "^7.3.0",
 
     "ext-bcmath": "*",
     "ext-curl": "*",
@@ -47,7 +47,10 @@
     "ext-gd": "*",
     "ext-mcrypt": "*",
     "ext-xmlreader": "*",
-    "ext-zlib": "*"
+    "ext-zlib": "*",
+
+    "ext-json": "*",
+    "ext-pcntl": "*"
   },
   "require-dev": {
     "johnpbloch/wordpress": "^5.1.1",

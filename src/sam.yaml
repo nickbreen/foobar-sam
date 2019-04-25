@@ -6,12 +6,18 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
-      CodeUri: ../out/func-sh
+#      Runtime: provided
+#      CodeUri: ../out/func-sh
+#      Handler: handler.sh:handler
+
       Runtime: provided
-      Handler: handler.sh:handler
-#      Handler: index.php
+      CodeUri: ../out/func-php
+      Handler: debug.php
+
 #      Runtime: nodejs8.10
+#      CodeUri: ../out/func-js
 #      Handler: index.handler
+
       MemorySize: 256
       Timeout: 5
       Tracing: Active

@@ -27,10 +27,12 @@ Then any push to master or a tag will trigger CI.
 - [Moving wp-content folder](https://codex.wordpress.org/Editing_wp-config.php#Moving_wp-content_folder)
 
 
-# PHP
+# PHP/tmp/php-7.0.11/compiled/
 
 - [Required PHP extensions](https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 - Compile in docker with with [amazonlinux:1-wth-sources](https://hub.docker.com/_/amazonlinux)
+- CGI https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
+   
 
 
 # Structure

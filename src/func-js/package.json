@@ -9,7 +9,8 @@
     "querystring": "*"
   },
   "files": [
-    "index.js"
+    "php-cgi.js",
+    "php-svr.js"
   ],
   "engines": {
     "node": "~8.10"

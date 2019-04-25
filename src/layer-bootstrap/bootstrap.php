@@ -3,8 +3,6 @@
 
 error_reporting( E_ALL | E_STRICT );
 
-$AWS_LAMBDA_RUNTIME_API = getenv( 'AWS_LAMBDA_RUNTIME_API' );
-
 /* https://gist.github.com/henriquemoody/6580488 */
 $http_codes = [
 	100 => 'Continue',
@@ -49,12 +47,9 @@ $http_codes = [
 	417 => 'Expectation Failed',
 	418 => 'I\'m a teapot',
 	419 => 'Authentication Timeout',
-	420 => 'Enhance Your Calm',
-	420 => 'Method Failure',
 	422 => 'Unprocessable Entity',
 	423 => 'Locked',
 	424 => 'Failed Dependency',
-	424 => 'Method Failure',
 	425 => 'Unordered Collection',
 	426 => 'Upgrade Required',
 	428 => 'Precondition Required',
@@ -63,7 +58,6 @@ $http_codes = [
 	444 => 'No Response',
 	449 => 'Retry With',
 	450 => 'Blocked by Windows Parental Controls',
-	451 => 'Redirect',
 	451 => 'Unavailable For Legal Reasons',
 	494 => 'Request Header Too Large',
 	495 => 'Cert Error',
@@ -86,6 +80,8 @@ $http_codes = [
 	599 => 'Network connect timeout error'
 ];
 
+$AWS_LAMBDA_RUNTIME_API = getenv( 'AWS_LAMBDA_RUNTIME_API' );
+
 function start_webserver() {
 	$SERVER_STARTUP_TIMEOUT = 1000000; // 1 second
 
@@ -98,11 +94,10 @@ function start_webserver() {
 			// exec the command
 			$workingDir = getenv( 'LAMBDA_TASK_ROOT' );
 			$router     = getenv( '_HANDLER' );
-			$cmd = "php -S localhost:8000 -t ${workingDir} ${router}";
-			fprintf(STDERR, "$cmd\n%s", print_r(fstat(fopen("${workingDir}/${router}", 'r')), true));
-			fprintf(STDERR, file_get_contents("http://localhost:8080"));
-			exec( $cmd );
-			exit;
+			$cmd = "php -c /opt/etc/php.ini -S localhost:8000 -t ${workingDir} ${router} 2>/tmp/err 1>/tmp/out";
+			shell_exec( $cmd );
+//			exit(69); //EX_UNAVAILABLE
+            exit;
 
 		default:
 			// Wait for child server to start
