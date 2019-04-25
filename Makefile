@@ -83,17 +83,18 @@ out/php-src-php-$(php_version): src/php/php-src-php-$(php_version).tar.gz src/ph
 
 out/php: src/php/Dockerfile
 	rm -rf $@; mkdir -p $@
-	docker build -t build-php ${<D}
+	docker pull lambda-brew-php || docker build -t lambda-brew-php ${<D}
+	docker save --output lambda-brew-php.tar lambda-brew-php
+	tar tf lambda-brew-php.tar
 
-
-	docker run --rm --tty --workdir /var/task \
-			--env HOMEBREW_CACHE=/opt/.cache \
-			--env HOMEBREW_NO_AUTO_UPDATE=true \
-			--volume $(realpath .cache/brew):/opt/.cache:rw \
-			--volume $(realpath $@):/var/task/brew-2.1.1/Cellar:rw \
-			--volume $(realpath src/php/bootstrap.sh):/opt/bootstrap:ro \
-			--volume $(realpath src/php/brew-2.1.1.tar.gz):/var/task/brew-2.1.1.tar.gz:ro \
-			lambci/lambda:build /opt/bootstrap
+#	docker run --rm --tty --workdir /var/task \
+#			--env HOMEBREW_CACHE=/opt/.cache \
+#			--env HOMEBREW_NO_AUTO_UPDATE=true \
+#			--volume $(realpath .cache/brew):/opt/.cache:rw \
+#			--volume $(realpath $@):/var/task/brew-2.1.1/Cellar:rw \
+#			--volume $(realpath src/php/bootstrap.sh):/opt/bootstrap:ro \
+#			--volume $(realpath src/php/brew-2.1.1.tar.gz):/var/task/brew-2.1.1.tar.gz:ro \
+#			lambci/lambda:build /opt/bootstrap
 
 src/php/php-src-php-$(php_version).tar.gz:
 	rm -rf $@; mkdir -p ${@D}
