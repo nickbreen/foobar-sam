@@ -46,12 +46,32 @@ out/layer-wp: src/layer-wp/*
 	$(composer) install --working-dir=$@ --prefer-dist
 	$(composer) config --working-dir=$@ version $(version)
 
-out/layer-php: src/layer-php/*
+out/layer-php: src/layer-php/yum.Dockerfile
 	rm -rf $@; mkdir -p $@/lib
-	tar xf src/layer-php/libmcrypt-4.4.8.tgz --directory=$@/lib --strip-components=2
-	tar xf src/layer-php/libtidy-0.99.tgz --directory=$@/lib --strip-components=2
-	tar xf src/layer-php/php-7.3.3.tgz --directory=$@ --strip-components=1
-	cp -r -t $@ src/layer-php/etc
+#	tar xf src/layer-php/libmcrypt-4.4.8.tgz --directory=$@/lib --strip-components=2
+#	tar xf src/layer-php/libtidy-0.99.tgz --directory=$@/lib --strip-components=2
+#	tar xf src/layer-php/php-7.3.3.tgz --directory=$@ --strip-components=1
+#	cp -r -t $@ src/layer-php/etc
+
+	rm -rf $@; mkdir -p $@
+	docker ps -qaf name=${@F} | xargs -r docker rm
+	docker build --tag ${@F} - < ${<}
+	docker create --name ${@F} ${@F} /bin/sh
+	docker cp ${@F}:/opt/bin $@
+	docker cp ${@F}:/opt/etc $@
+	docker cp ${@F}:/opt/lib $@
+
+#	docker save --output $@/lambda-brew-php.tar lambda-brew-php
+#	tar tf lambda-brew-php.tar manifest.json
+
+#	docker run --rm --tty --workdir /var/task \
+#			--env HOMEBREW_CACHE=/opt/.cache \
+#			--env HOMEBREW_NO_AUTO_UPDATE=true \
+#			--volume $(realpath .cache/brew):/opt/.cache:rw \
+#			--volume $(realpath $@):/var/task/brew-2.1.1/Cellar:rw \
+#			--volume $(realpath src/php/bootstrap.sh):/opt/bootstrap:ro \
+#			--volume $(realpath src/php/brew-2.1.1.tar.gz):/var/task/brew-2.1.1.tar.gz:ro \
+#			lambci/lambda:build /opt/bootstrap
 
 out/layer-bootstrap: src/layer-bootstrap/bootstrap.php FORCE
 	rm -rf $@; mkdir -p $@
@@ -80,21 +100,6 @@ php: out/php-src-php-$(php_version) FORCE
 out/php-src-php-$(php_version): src/php/php-src-php-$(php_version).tar.gz src/php/bootstrap.sh
 	rm -rf $@; mkdir -p $@
 	tar xf $< --directory=$@ --strip-components=1
-
-out/php: src/php/Dockerfile
-	rm -rf $@; mkdir -p $@
-	docker pull lambda-brew-php || docker build -t lambda-brew-php ${<D}
-	docker save --output lambda-brew-php.tar lambda-brew-php
-	tar tf lambda-brew-php.tar
-
-#	docker run --rm --tty --workdir /var/task \
-#			--env HOMEBREW_CACHE=/opt/.cache \
-#			--env HOMEBREW_NO_AUTO_UPDATE=true \
-#			--volume $(realpath .cache/brew):/opt/.cache:rw \
-#			--volume $(realpath $@):/var/task/brew-2.1.1/Cellar:rw \
-#			--volume $(realpath src/php/bootstrap.sh):/opt/bootstrap:ro \
-#			--volume $(realpath src/php/brew-2.1.1.tar.gz):/var/task/brew-2.1.1.tar.gz:ro \
-#			lambci/lambda:build /opt/bootstrap
 
 src/php/php-src-php-$(php_version).tar.gz:
 	rm -rf $@; mkdir -p ${@D}
