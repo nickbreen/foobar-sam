@@ -111,7 +111,7 @@ int: out/test/int
 out/test/int: $(sam_deps) src/event.json FORCE
 	rm -rf $@; mkdir -p $@
 	sam local invoke --debug --event src/event.json --template src/sam.yaml --docker-volume-basedir . Function > $@/invoke.out
-	jq -r .body < $@/invoke.out
+	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/invoke.out
 
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE
