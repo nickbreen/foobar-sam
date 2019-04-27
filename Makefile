@@ -114,13 +114,13 @@ out/test/int: $(sam_deps) src/test/event.json FORCE
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
-	src/test/test.sh -o $@ -t $(realpath src/sam.yaml)
+	src/test/test.sh -P . -o $@ -t $(realpath src/sam.yaml)
 
 til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
 til: out/test/til
 out/test/til: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
-	src/test/test.sh -o $@ -t $(realpath src/sam.yaml) -u $(url)
+	src/test/test.sh -p . -o $@ -t $(realpath src/sam.yaml) -u $(url)
 
 FORCE:
