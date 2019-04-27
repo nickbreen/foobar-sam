@@ -19,11 +19,9 @@ img2lambda_version = 0.1.1
 php_version = 7.3.4
 composer_version = 1.8.5
 
-.PHONY: build clean outdated update int acc til
+.PHONY: clean outdated update int acc til
 
 sam_deps = src/sam.yaml out/func-php out/layer-php/layer-1.d
-
-build: out/func-php out/layer-php FORCE
 
 clean:
 	rm -rf out/*
@@ -42,13 +40,13 @@ src/func-php/composer.phar:
 	cd ${@D}; sha256sum -c ${@F}.sha256sum
 	chmod +x ${@}
 
-out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php/handler.php src/func-php/wp-config.php #src/func-php/bootstrap
+out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php/handler.php src/func-php/wp-config.php
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 	$(composer) config --working-dir=$@ version $(version)
 
-src/event.json:
+src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
 out/layer-php/image: tag = layer-php:latest
@@ -108,7 +106,7 @@ update: src/func-php
 # Testing
 
 int: out/test/int
-out/test/int: $(sam_deps) src/event.json FORCE
+out/test/int: $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 	sam local invoke --event src/event.json --template src/sam.yaml --docker-volume-basedir . Function > $@/invoke.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/invoke.out
