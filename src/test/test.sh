@@ -39,7 +39,7 @@ echo Using ${url}
 
 some_json=$(mktemp)
 
-jq -n '{some: "json"}' > ${some_json}
+jq -n '{"test": "body"}' > ${some_json}
 
 curl -vf -T ${some_json} ${url}some.json \
         --next "${url}?q=hello" \
