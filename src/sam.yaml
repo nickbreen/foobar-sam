@@ -36,7 +36,7 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-wp
       Runtime: nodejs8.10
       CodeUri: out/func-js
-      Handler: php-cli.handler
+      Handler: php-cgi.handler
       MemorySize: 256
       Timeout: 5
       Tracing: Active
