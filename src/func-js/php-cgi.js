@@ -1,5 +1,9 @@
 const {spawn} = require('child_process');
 const parser = require('http-string-parser');
+const {PassThrough} = require('stream');
+const {HTTPParser} = process.binding('http_parser');
+
+const httpParser = new HTTPParser(HTTPParser.RESPONSE);
 
 function handler(event, context) {
     // Sets some sane defaults here so that this function doesn't fail when it's not handling a HTTP request from
@@ -31,10 +35,14 @@ function handler(event, context) {
         }, headers)
     });
 
+    const requestEntityStream = new PassThrough();
+    requestEntityStream.pipe(php.stdin)
+    requestEntityStream.end(Buffer.from(event.body, 'base64'));
+
     // Listen for output on stdout, this is the HTTP response.
     let response = '';
     php.stdout.on('data', function(data) {
-        response += data.toString('utf-8');
+        response += data.toString('utf8');
     });
 
     // When the process exists, we should have a complete HTTP response to send back to API Gateway.

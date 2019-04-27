@@ -15,8 +15,6 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
-php_version = 7.3.4
-
 .PHONY: build clean outdated update test int acc til
 
 build: $(addprefix out/layer-,php wp bootstrap) $(addprefix out/func-,js sh php) FORCE
@@ -46,32 +44,33 @@ out/layer-wp: src/layer-wp/*
 	$(composer) install --working-dir=$@ --prefer-dist
 	$(composer) config --working-dir=$@ version $(version)
 
-out/layer-php: src/layer-php/yum.Dockerfile
-	rm -rf $@; mkdir -p $@/lib
-#	tar xf src/layer-php/libmcrypt-4.4.8.tgz --directory=$@/lib --strip-components=2
-#	tar xf src/layer-php/libtidy-0.99.tgz --directory=$@/lib --strip-components=2
-#	tar xf src/layer-php/php-7.3.3.tgz --directory=$@ --strip-components=1
-#	cp -r -t $@ src/layer-php/etc
-
+out/layer-php: out/layer-php/img2lambda src/layer-php/Dockerfile src/layer-php/php-src-php-7.3.4.tar.gz
 	rm -rf $@; mkdir -p $@
-	docker ps -qaf name=${@F} | xargs -r docker rm
-	docker build --tag ${@F} - < ${<}
-	docker create --name ${@F} ${@F} /bin/sh
-	docker cp ${@F}:/opt/bin $@
-	docker cp ${@F}:/opt/etc $@
-	docker cp ${@F}:/opt/lib $@
+	docker build --tag ${@F} src/layer-php
+    out/layer-php/img2lambda -i ${@F} --dry-run
 
-#	docker save --output $@/lambda-brew-php.tar lambda-brew-php
-#	tar tf lambda-brew-php.tar manifest.json
+    # Look for the 2 layers that contain files in opt/
+    ls output/layer-1.zip
+    ls output/layer-2.zip
 
-#	docker run --rm --tty --workdir /var/task \
-#			--env HOMEBREW_CACHE=/opt/.cache \
-#			--env HOMEBREW_NO_AUTO_UPDATE=true \
-#			--volume $(realpath .cache/brew):/opt/.cache:rw \
-#			--volume $(realpath $@):/var/task/brew-2.1.1/Cellar:rw \
-#			--volume $(realpath src/php/bootstrap.sh):/opt/bootstrap:ro \
-#			--volume $(realpath src/php/brew-2.1.1.tar.gz):/var/task/brew-2.1.1.tar.gz:ro \
-#			lambci/lambda:build /opt/bootstrap
+
+out/layer-php/img2lambda: src/layer-php/img2lambda.tar-0.1.0.gz
+	rm -rf $@; mkdir -p ${@}
+	tar xf $< --directory $@ --strip-components 1
+	find $@
+	cd $@; ./scripts/build_example.sh
+
+src/layer-php/php-src-php-7.3.4.tar.gz:
+	rm -rf $@; mkdir -p ${@D}
+	curl -fJLR -z ${@} -o ${@} https://github.com/php/php-src/archive/php-7.3.4.tar.gz
+
+src/layer-php/img2lambda:
+	rm -rf $@; mkdir -p ${@D}
+	curl -fJLR -z ${@} -o ${@} https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/0.1.0/linux-amd64-img2lambda
+
+src/layer-php/img2lambda.tar-0.1.0.gz:
+	rm -rf $@; mkdir -p ${@D}
+	curl -fJLR -z ${@} -o ${@} https://github.com/awslabs/aws-lambda-container-image-converter/archive/0.1.0.tar.gz
 
 out/layer-bootstrap: src/layer-bootstrap/bootstrap.php FORCE
 	rm -rf $@; mkdir -p $@
@@ -92,27 +91,6 @@ out/func-js.outdated: out/func-js
 update: out/layer-wp
 	$(composer) update --working-dir=$< --prefer-dist
 	cp -t . $</composer.lock
-
-$(addprefix src/layer-php/,libtidy-0.99.tgz libmcrypt-4.4.8.tgz php-7.3.3.tgz):
-	wget --no-verbose --timestamping --directory-prefix=$(@D) https://lambci.s3.amazonaws.com/binaries/$(@F)
-
-php: out/php-src-php-$(php_version) FORCE
-out/php-src-php-$(php_version): src/php/php-src-php-$(php_version).tar.gz src/php/bootstrap.sh
-	rm -rf $@; mkdir -p $@
-	tar xf $< --directory=$@ --strip-components=1
-
-src/php/php-src-php-$(php_version).tar.gz:
-	rm -rf $@; mkdir -p ${@D}
-	wget --no-verbose --timestamping --output-document=${@}\
-			https://codeload.github.com/php/php-src/tar.gz/php-$(php_version)
-
-src/php/php-build-php-build-v0.10.0-master.tar.gz:
-	mkdir -p ${@D}
-	curl -sSfJLR -o ${@} -z${@} https://github.com/php-build/php-build/tarball/master
-
-src/php/brew-2.1.1.tar.gz:
-	mkdir -p ${@D}
-	curl -sSfJLR -o ${@} -z${@} https://github.com/Homebrew/brew/archive/2.1.1.tar.gz
 
 test: int
 

@@ -31,7 +31,7 @@ Then any push to master or a tag will trigger CI.
 
 - [Required PHP extensions](https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 - Compile in docker with with [amazonlinux:1-wth-sources](https://hub.docker.com/_/amazonlinux)
-- CGI https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
+- CGI: https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
    
 - FFS: https://github.com/awslabs/aws-lambda-container-image-converter/blob/master/example/Dockerfile
 
