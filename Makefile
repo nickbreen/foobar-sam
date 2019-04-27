@@ -15,6 +15,9 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
+img2lambda_version = 0.1.1
+php_version = 7.3.4
+
 .PHONY: build clean outdated update test int acc til
 
 build: $(addprefix out/layer-,php wp bootstrap) $(addprefix out/func-,js sh php) FORCE
@@ -44,15 +47,17 @@ out/layer-wp: src/layer-wp/*
 	$(composer) install --working-dir=$@ --prefer-dist
 	$(composer) config --working-dir=$@ version $(version)
 
-out/layer-php: out/layer-php/img2lambda src/layer-php/Dockerfile src/layer-php/php-src-php-7.3.4.tar.gz
+out/layer-php: src/layer-php/linux-amd64-img2lambda src/layer-php/Dockerfile src/layer-php/php-src-php-$(php_version).tar.gz
 	rm -rf $@; mkdir -p $@
 	docker build --tag ${@F} src/layer-php
-    out/layer-php/img2lambda -i ${@F} --dry-run
+	src/layer-php/linux-amd64-img2lambda --image ${@F} --dry-run --output $@
+	unzip -l $@/layer-1.zip
 
-    # Look for the 2 layers that contain files in opt/
-    ls output/layer-1.zip
-    ls output/layer-2.zip
-
+src/layer-php/composer.phar:
+	curl -fJLR -z ${@} -o ${@} https://getcomposer.org/download/1.8.5/composer.phar \
+			-o ${@}.sha256sum https://getcomposer.org/download/1.8.5/composer.phar.sha256sum
+	cd ${@D}; sha256sum -c ${@F}.sha256sum
+	chmod +x ${@}
 
 out/layer-php/img2lambda: src/layer-php/img2lambda.tar-0.1.0.gz
 	rm -rf $@; mkdir -p ${@}
@@ -60,13 +65,16 @@ out/layer-php/img2lambda: src/layer-php/img2lambda.tar-0.1.0.gz
 	find $@
 	cd $@; ./scripts/build_example.sh
 
-src/layer-php/php-src-php-7.3.4.tar.gz:
+src/layer-php/php-src-php-$(php_version).tar.gz:
 	rm -rf $@; mkdir -p ${@D}
-	curl -fJLR -z ${@} -o ${@} https://github.com/php/php-src/archive/php-7.3.4.tar.gz
+	curl -fJLR -z ${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
 
-src/layer-php/img2lambda:
+src/layer-php/linux-amd64-img2lambda:
 	rm -rf $@; mkdir -p ${@D}
-	curl -fJLR -z ${@} -o ${@} https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/0.1.0/linux-amd64-img2lambda
+	curl -fJLR -z $@ -o $@ https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(version)/linux-amd64-img2lambda \
+		 -z $@.sha256 -o $@.sha256 https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(version)/linux-amd64-img2lambda.sha256
+	cd ${@D}; sha256sum -c ${@F}.sha256
+	chmod +x $@
 
 src/layer-php/img2lambda.tar-0.1.0.gz:
 	rm -rf $@; mkdir -p ${@D}

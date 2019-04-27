@@ -25,7 +25,8 @@ declare PYTHONPATH #(Python) $LAMBDA_RUNTIME_DIR.
 declare GEM_PATH #(Ruby) $LAMBDA_TASK_ROOT/vendor/bundle/ruby/2.5.0:/opt/ruby/gems/2.5.0.
 declare AWS_LAMBDA_RUNTIME_API # (custom runtime) The host and port of the runtime API.
 
-source "${LAMBDA_TASK_ROOT}/${_HANDLER%:*}"
+cd "${LAMBDA_TASK_ROOT}"
+source "${_HANDLER%:*}"
 
 while true
 do

@@ -1,5 +1,0 @@
-#!/bin/sh
-
-handler () {
-  cat -
-}
