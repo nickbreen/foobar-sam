@@ -59,39 +59,30 @@ async function handler(event, context)
     console.log(event);
     console.log(context);
 
-    return new Promise((resolve, reject) =>
+    const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
+
+    const env = translateEventForEnvironmentVariables(body, event);
+
+    const php = spawnSync(
+        '/opt/bin/php-cgi',
+        ['-c', 'php.ini'],
+        {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: body});
+
+    if (php.status === 0)
     {
-        const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
+        const response = parseResponse(php.stdout.toString('utf8'));
 
-        const env = translateEventForEnvironmentVariables(body, event);
-
-        const php = spawnSync(
-            '/opt/bin/php-cgi',
-            ['-c', 'php.ini'],
-            {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: body});
-        if (php.status === 0)
-        {
-            const response = parseResponse(php.stdout.toString('utf8'));
-
-            resolve({
-                statusCode: response.statusCode || 200,
-                headers: response.headers,
-                body: response.body,
-                isBase64Encoded: false
-            });
-        }
-        else
-        {
-            console.error(php.stdout.toString('utf8'));
-            console.error(php.stderr.toString('utf8'));
-            reject({
-                statusCode: 500,
-                headers: [],
-                body: null,
-                isBase64Encoded: false
-            });
-        }
-    });
+        return {
+            statusCode: response.statusCode || 200,
+            headers: response.headers,
+            body: response.body,
+            isBase64Encoded: false
+        };
+    }
+    else
+    {
+        throw new Error(php.stderr.toString('utf8'));
+    }
 }
 
 // noinspection JSUnusedGlobalSymbols
