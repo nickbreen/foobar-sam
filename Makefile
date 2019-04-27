@@ -46,13 +46,16 @@ out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
-out/func-js: src/func-js/package-lock.json src/func-js/package-lock.json src/func-js/*.js
+out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/index.php src/func-js/php.ini
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	cd $@; npm install
 
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
+
+out/php.ini: src/layer-php/php-src-php-$(php_version).tar.gz
+	tar xf $< -O php-src-php-7.3.4/php.ini-production > $@
 
 out/layer-php/image: tag = layer-php:latest
 out/layer-php/image: src/img2lambda/linux-amd64-img2lambda src/layer-php/*
@@ -118,7 +121,7 @@ out/test/int: $(sam_deps) src/test/event.json src/test/xFunction.expected FORCE
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/phpFunction.out > $@/phpFunction.actual
 	diff src/test/xFunction.expected $@/phpFunction.actual
 
-	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . jsFunction > $@/jsFunction.out
+	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . jsFunction > $@/jsFunction.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/jsFunction.out > $@/jsFunction.actual
 	diff src/test/xFunction.expected $@/jsFunction.actual
 

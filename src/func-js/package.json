@@ -1,0 +1,19 @@
+{
+  "name": "wp",
+  "dependencies": {},
+  "devDependencies": {
+    "http": "*",
+    "child_process": "*",
+    "aws-sdk": "*",
+    "url": "*",
+    "querystring": "*"
+  },
+  "files": [
+    "php-cgi.js",
+    "php-cli.js",
+    "php-svr.js"
+  ],
+  "engines": {
+    "node": "~8.10"
+  }
+}
