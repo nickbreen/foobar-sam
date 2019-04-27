@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -euo pipefail
+set -xeuo pipefail
 
 # AWS Lambda Environment Variables, per https://docs.aws.amazon.com/lambda/latest/dg/lambda-environment-variables.html
 declare _HANDLER # The handler location configured on the function.
@@ -25,20 +25,22 @@ declare PYTHONPATH #(Python) $LAMBDA_RUNTIME_DIR.
 declare GEM_PATH #(Ruby) $LAMBDA_TASK_ROOT/vendor/bundle/ruby/2.5.0:/opt/ruby/gems/2.5.0.
 declare AWS_LAMBDA_RUNTIME_API # (custom runtime) The host and port of the runtime API.
 
-cd "${LAMBDA_TASK_ROOT}"
-source "${_HANDLER%:*}"
-
 while true
 do
-  HEADERS="$(mktemp)"
-  REQUEST="$(mktemp)"
-  RESPONSE="$(mktemp)"
-  curl -fsS -LD "${HEADERS}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next" -o "${REQUEST}"
+	HEADERS="$(mktemp)"
+	REQUEST="$(mktemp)"
+	RESPONSE="$(mktemp)"
+	curl -fsS -LD "${HEADERS}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next" -o "${REQUEST}"
 
-  REQUEST_ID=$(sed -n -E '/Lambda-Runtime-Aws-Request-Id/I s/^.*:\s*([-[:xdigit:]]+).*$/\1/ p' "${HEADERS}")
-  test "${REQUEST_ID}"
 
-  "${_HANDLER#*:}" < "${REQUEST}" > "${RESPONSE}"
+	REQUEST_ID=$(sed -n -E '/Lambda-Runtime-Aws-Request-Id/I s/^.*:\s*([-[:xdigit:]]+).*$/\1/ p' "${HEADERS}")
+	test "${REQUEST_ID}"
 
-  curl -fsS "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${REQUEST_ID}/response" -d "@${RESPONSE}"
+	echo REQUEST: >&2
+	cat "${REQUEST}" >&2
+	php -f "${_HANDLER}" < "${REQUEST}" > "${RESPONSE}"
+	echo RESPONSE: >&2
+	cat "${RESPONSE}" >&2
+
+	curl -fsS "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${REQUEST_ID}/response" -d "@${RESPONSE}"
 done

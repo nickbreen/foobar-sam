@@ -30,13 +30,13 @@ ARG php_src=php-src-php-${php_version}.tar.gz
 ADD ${php_src} /opt/src
 WORKDIR /opt/src/php-src-php-${php_version}
 RUN ./buildconf --force
-RUN ./configure --prefix=/opt/php/ --with-openssl --with-curl --with-zlib --without-pear --enable-phar
+RUN ./configure --prefix=/opt/ --with-openssl --with-curl --with-zlib --without-pear --disable-phar
 RUN make install
-RUN /opt/php/bin/php -v
-RUN /opt/php/bin/php-cgi -v
+RUN /opt/bin/php -v
+RUN /opt/bin/php-cgi -v
 
 # Prepare runtime files
-RUN mkdir -p /lambda-php-runtime/bin && cp /opt/php/bin/{php,php-cgi} /lambda-php-runtime/bin/
+RUN mkdir -p /lambda-php-runtime/bin && cp /opt/bin/{php,php-cgi} /lambda-php-runtime/bin/
 
 ARG bootstrap=bootstrap.sh
 COPY ${bootstrap} /lambda-php-runtime/bootstrap
@@ -54,3 +54,5 @@ FROM runtime as function
 
 ARG handler=handler.sh
 COPY ${hander} /var/task/
+WORKDIR /var/task/
+

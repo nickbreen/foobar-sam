@@ -1,0 +1,9 @@
+#!/bin/sh
+
+
+find /opt -ls
+
+pwd
+
+
+exec /opt/bootstrap
