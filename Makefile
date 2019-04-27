@@ -21,7 +21,7 @@ composer_version = 1.8.5
 
 .PHONY: clean outdated update int acc til
 
-sam_deps = src/sam.yaml out/func-php out/layer-php/layer-1.d
+sam_deps = src/sam.yaml out/func-php out/layer-php/layer-1.d out/func-js
 
 clean:
 	rm -rf out/*
@@ -44,7 +44,12 @@ out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
-	$(composer) config --working-dir=$@ version $(version)
+#	$(composer) config --working-dir=$@ version $(version)
+
+out/func-js: src/func-js/package-lock.json src/func-js/package-lock.json src/func-js/*.js
+	rm -rf $@; mkdir $@
+	cp -t $@ $^
+	cd $@; npm install
 
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
@@ -106,10 +111,16 @@ update: src/func-php
 # Testing
 
 int: out/test/int
-out/test/int: $(sam_deps) src/test/event.json FORCE
+out/test/int: $(sam_deps) src/test/event.json src/test/xFunction.expected FORCE
 	rm -rf $@; mkdir -p $@
-	sam local invoke --event src/event.json --template src/sam.yaml --docker-volume-basedir . Function > $@/invoke.out
-	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/invoke.out
+
+	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . phpFunction > $@/phpFunction.out
+	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/phpFunction.out > $@/phpFunction.actual
+	diff src/test/xFunction.expected $@/phpFunction.actual
+
+	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . jsFunction > $@/jsFunction.out
+	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/jsFunction.out > $@/jsFunction.actual
+	diff src/test/xFunction.expected $@/jsFunction.actual
 
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE

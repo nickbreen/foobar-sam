@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: PHP Lambda
 Transform: AWS::Serverless-2016-10-31
 Resources:
-  Function:
+  phpFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
@@ -13,7 +13,7 @@ Resources:
       Timeout: 5
       Tracing: Active
       Layers:
-        - !Ref Layer
+        - !Ref phpLayer
       Environment:
         Variables:
           SomeVar: some-var
@@ -30,7 +30,35 @@ Resources:
             Path: /{proxy+}
             Method: ANY
 
-  Layer:
+  jsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-wp
+      Runtime: nodejs8.10
+      CodeUri: out/func-js
+      Handler: php-cli.handler
+      MemorySize: 256
+      Timeout: 5
+      Tracing: Active
+      Layers:
+        - !Ref phpLayer
+      Environment:
+        Variables:
+          SomeVar: some-var
+          SOME_VAR: some var
+      Events:
+        RootAPI:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+        API:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+  phpLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: PHP
