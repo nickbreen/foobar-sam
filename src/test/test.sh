@@ -26,7 +26,15 @@ shift $((${OPTIND}-1))
 if [ ! ${url-} ]
 then
     url=http://${host}:${port}/
-    trap 'kill -SIGINT %1' EXIT
+    trap 'kill -SIGINT %1; docker kill mysql' EXIT
+
+    docker run --name mysql --rm \
+    		--env MYSQL_ROOT_PASSWORD=rootpasswd \
+    		--env MYSQL_DATABASE=wordpress \
+    		--env MYSQL_PASSWORD=wordpress \
+    		--env MYSQL_USER=wordpress \
+    		mysql
+
     sam local start-api \
             ${host+--host ${host}} \
             ${port+--port ${port}} \

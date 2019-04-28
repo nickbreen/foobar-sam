@@ -33,6 +33,10 @@ Resources:
       Environment:
         Variables:
           SCRIPT: !Ref script
+          WP_DATABASE_NAME: wordpress
+          WP_DATABASE_USER: wordpress
+          WP_DATABASE_PASSWORD: wordpress
+          WP_DATABASE_HOST: localhost
       Events:
         root:
           Type: Api

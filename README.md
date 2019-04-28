@@ -45,7 +45,7 @@
     
   - lambda layer, composer managed WordPress app (src/layer-wp)
   
-    built based on [john bloch]
+    built based on [john bloch] (what about [roots.io][]?)
 
 # References
 
@@ -64,6 +64,7 @@
 
 - [Giving WordPress Its Own Directory][]
 - [Moving wp-content folder][]
+- [john bloch][]
 
 ## Other 
 
@@ -90,6 +91,7 @@
 [sam local invoke]: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-invoke.html]
 
 [john bloch]: https://code.johnpbloch.com/category/wordpress/
+[roots.io]: https://roots.io/announcing-the-roots-wordpress-composer-package/
 [Giving WordPress Its Own Directory]: https://codex.wordpress.org/Giving_WordPress_Its_Own_Directory
 [Moving wp-content folder]: https://codex.wordpress.org/Editing_wp-config.php#Moving_wp-content_folder
 
