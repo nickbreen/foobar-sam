@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: PHP Lambda
 Transform: AWS::Serverless-2016-10-31
+Parameters:
+  script:
+    Type: String
+    Default: wp.php
+    AllowedValues:
+    - wp.php
+    - echo.php
 Resources:
   function:
     Type: AWS::Serverless::Function
@@ -17,7 +24,7 @@ Resources:
         - !Ref phpLayer
       Environment:
         Variables:
-          SCRIPT: wp.php
+          SCRIPT: !Ref script
       Events:
         root:
           Type: Api

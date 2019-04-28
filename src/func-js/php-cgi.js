@@ -2,6 +2,7 @@ const {spawnSync} = require('child_process');
 const querystring = require('querystring');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
+const fs = require('fs');
 
 function extractPhpHeaderEnvironmentVariablesFromEvent(event)
 {
@@ -16,7 +17,7 @@ function extractPhpSpecificEnvironmentVariableFromEvent(event)
 {
     return {
         REDIRECT_STATUS: 200,
-        SCRIPT_FILENAME: process.env.SCRIPT || "index.php",
+        SCRIPT_FILENAME: process.env.SCRIPT,
         REQUEST_URI: event.path
     };
 }
@@ -35,7 +36,7 @@ function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
         REMOTE_IDENT: null,
         REMOTE_USER: null,
         REQUEST_METHOD: event.httpMethod,
-        SCRIPT_NAME: process.env.SCRIPT || "index.php",
+        SCRIPT_NAME: process.env.SCRIPT,
         SERVER_NAME: event.headers['Host'],
         SERVER_PORT: event.headers['X-Forwarded-Port'],
         SERVER_PROTOCOL: event.protocol,
@@ -83,6 +84,13 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
 
 async function handler(event, context)
 {
+    if (!process.env.SCRIPT)
+    {
+        throw new Error("No script specified in environment variable SCRIPT: " + process.env.SCRIPT);
+    }
+
+    fs.accessSync(process.env.SCRIPT, fs.constants.R_OK)
+
     const {body, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
     const php = spawnSync(
@@ -97,7 +105,8 @@ async function handler(event, context)
             '-d', 'cgi.discard_path=1',
             '-d', 'cgi.rfc2616_headers=1',
             '-d', 'session.save_handler', // unset
-            '-d', 'opcache.enable=1'
+            '-d', 'opcache.enable=1',
+            '-d', 'enable_post_data_reading=Off' // this will probably break WordPress
         ],
         {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: body});
 
