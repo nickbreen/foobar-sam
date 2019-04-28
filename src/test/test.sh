@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -veuo pipefail
 
 declare OPT debug host=localhost out port=3000 dir src template url params
 
@@ -34,23 +34,20 @@ then
             ${template+--template ${template}} \
             ${dir+--docker-volume-basedir ${dir}} \
             ${params+--parameter-overrides ${params}} \
-            --region ap-southeast-2 & #> ${out}/stdout.log 2> ${out}/stderr.log &
+            --region ap-southeast-2 &
 
     sleep 5s
 fi
 
 echo Using ${url}
 
-some_json=$(mktemp)
-
-jq -nc '{"test": "body"}' > ${some_json}
-
-curl -vf -T ${some_json} ${url}some.json -o ${out}/some.json
-diff ${some_json} ${out}/some.json
+curl -vf -T ${src}/expected.json ${url}some.json -o ${out}/some.json
+diff ${src}/expected.json ${out}/some.json
 
 curl -vf "${url}?q=hello" -o ${out}/hello
 diff /dev/null ${out}/hello
 
-curl -vf  "${url}home?p=v1&p=v2&x&y=1" -o ${out}/home  #> ${out}/curl.stdout.log 2> ${out}/curl.stderr.log
+curl -vf  "${url}home?p=v1&p=v2&x&y=1" -o ${out}/home
 diff /dev/null ${out}/home
 
+wait

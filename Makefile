@@ -108,6 +108,9 @@ update: src/layer-wp
 
 # Testing
 
+src/test/expected.json:
+	jq -nc '{test:"body"}' | unix2dos > $@
+
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
@@ -115,8 +118,12 @@ int: out/test/int
 out/test/int: $(sam_deps) src/test/event.json src/test/expected.out FORCE
 	rm -rf $@; mkdir -p $@
 
-	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --event src/test/event.json --template src/sam.yaml \
-			--docker-volume-basedir . --parameter-overrides ParameterKey=script,ParameterValue=echo.php \
+	sam local invoke \
+			$(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+			--event src/test/event.json \
+			--template src/sam.yaml \
+			--docker-volume-basedir . \
+			--parameter-overrides ParameterKey=script,ParameterValue=echo.php \
 			function > $@/function.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
 	diff src/test/expected.out $@/actual.out
@@ -124,7 +131,13 @@ out/test/int: $(sam_deps) src/test/event.json src/test/expected.out FORCE
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
-	src/test/test.sh $(patsubst %,-d %,$(DEBUG_PORT)) -D . -o $@ -t $(realpath src/sam.yaml) -P ParameterKey=script,ParameterValue=echo.php
+	src/test/test.sh \
+			$(patsubst %,-d %,$(DEBUG_PORT)) \
+			-s src/test \
+			-D . \
+			-o $@ \
+			-t $(realpath src/sam.yaml) \
+			-P ParameterKey=script,ParameterValue=echo.php
 
 til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')

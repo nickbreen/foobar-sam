@@ -44,7 +44,7 @@ function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
     };
 }
 
-function extractEnvironmentVariablesFromEvent(contentLength, event)
+function extractEnvironmentVariablesFromEvent(event, contentLength)
 {
     return Object.assign(
         {},
@@ -54,19 +54,32 @@ function extractEnvironmentVariablesFromEvent(contentLength, event)
         extractPhpHeaderEnvironmentVariablesFromEvent(event));
 }
 
+function getResponseHeader(response, headerName)
+{
+    return Object.entries(response.headers)
+        .find(([header]) => header.toLowerCase() === headerName.toLowerCase()) || [];
+}
+
 function base64EncodeBodyIfRequired(response)
 {
-    const [, contentType] = Object.entries(response.headers)
-        .find(([header]) => header.toLowerCase() === 'content-type') || [];
+    const [, contentType] = getResponseHeader(response, 'content-type');
+
+    // const [contentLengthHeader, contentLength] = getResponseHeader(response, 'content-length');
 
     const mimeType = MIMEType.parse(contentType);
 
     const base64Encoded = mimeType.type !== 'text';
 
-    const body = base64Encoded ?
+    const responseBody = base64Encoded ?
         Buffer.from(response.body, 'utf8').toString('base64') :
         JSON.stringify(response.body);
-    return {base64Encoded, body};
+
+    // if (contentLength !== responseBody.length)
+    // {
+    //     response.headers[contentLengthHeader] = responseBody.length;
+    // }
+
+    return {base64Encoded, responseBody};
 }
 
 function base64DecodeBodyIfRequired(event)
@@ -76,10 +89,10 @@ function base64DecodeBodyIfRequired(event)
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
 {
-    const body = base64DecodeBodyIfRequired(event);
-    const contentLength = body ? body.length : null;
-    const env = extractEnvironmentVariablesFromEvent(contentLength, event);
-    return {body, env};
+    const requestBody = base64DecodeBodyIfRequired(event);
+    const contentLength = requestBody ? requestBody.length : null;
+    const env = extractEnvironmentVariablesFromEvent(event, contentLength);
+    return {requestBody, env};
 }
 
 async function handler(event, context)
@@ -91,7 +104,7 @@ async function handler(event, context)
 
     fs.accessSync(process.env.SCRIPT, fs.constants.R_OK)
 
-    const {body, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
+    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
     const php = spawnSync(
         '/opt/bin/php-cgi',
@@ -108,18 +121,18 @@ async function handler(event, context)
             '-d', 'opcache.enable=1',
             '-d', 'enable_post_data_reading=Off' // this will probably break WordPress
         ],
-        {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: body});
+        {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: requestBody});
 
     if (php.status === 0)
     {
         const response = parseResponse(php.stdout.toString('utf8'));
 
-        const {base64Encoded, body} = base64EncodeBodyIfRequired(response);
+        const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(response);
 
         return {
             statusCode: response.statusCode || 200,
             headers: response.headers,
-            body: body,
+            body: responseBody,
             isBase64Encoded: base64Encoded
         };
     }

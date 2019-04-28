@@ -6,8 +6,16 @@ Parameters:
     Type: String
     Default: wp.php
     AllowedValues:
-    - wp.php
-    - echo.php
+      - wp.php
+      - echo.php
+Globals:
+  Api:
+    BinaryMediaTypes: # https://github.com/awslabs/serverless-application-model/blob/master/examples/2016-10-31/implicit_api_settings/template.yaml
+      - '*~1*'
+    MethodSettings:
+      - LoggingLevel: INFO
+        ResourcePath: /*
+        HttpMethod: '*'
 Resources:
   function:
     Type: AWS::Serverless::Function
