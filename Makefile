@@ -46,7 +46,7 @@ out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
-out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/index.php src/func-js/php.ini
+out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/index.php out/php.ini
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	cd $@; npm install
@@ -117,9 +117,9 @@ int: out/test/int
 out/test/int: $(sam_deps) src/test/event.json src/test/xFunction.expected FORCE
 	rm -rf $@; mkdir -p $@
 
-	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . phpFunction > $@/phpFunction.out
-	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/phpFunction.out > $@/phpFunction.actual
-	diff src/test/xFunction.expected $@/phpFunction.actual
+#	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . phpFunction > $@/phpFunction.out
+#	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/phpFunction.out > $@/phpFunction.actual
+#	diff src/test/xFunction.expected $@/phpFunction.actual
 
 	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . jsFunction > $@/jsFunction.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/jsFunction.out > $@/jsFunction.actual

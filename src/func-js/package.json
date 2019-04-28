@@ -1,7 +1,8 @@
 {
   "name": "wp",
   "dependencies": {
-    "http-string-parser": "*"
+    "http-string-parser": "*",
+    "whatwg-mimetype": "*"
   },
   "devDependencies": {},
   "files": [

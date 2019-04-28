@@ -2,33 +2,33 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: PHP Lambda
 Transform: AWS::Serverless-2016-10-31
 Resources:
-  phpFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-wp
-      Runtime: provided
-      CodeUri: out/func-php
-      Handler: handler.php
-      MemorySize: 256
-      Timeout: 5
-      Tracing: Active
-      Layers:
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          SomeVar: some-var
-          SOME_VAR: some var
-      Events:
-        RootAPI:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
-        API:
-          Type: Api
-          Properties:
-            Path: /{proxy+}
-            Method: ANY
+#  phpFunction:
+#    Type: AWS::Serverless::Function
+#    Properties:
+#      FunctionName: !Sub ${AWS::StackName}-wp
+#      Runtime: provided
+#      CodeUri: out/func-php
+#      Handler: handler.php
+#      MemorySize: 256
+#      Timeout: 5
+#      Tracing: Active
+#      Layers:
+#        - !Ref phpLayer
+#      Environment:
+#        Variables:
+#          SomeVar: some-var
+#          SOME_VAR: some var
+#      Events:
+#        RootAPI:
+#          Type: Api
+#          Properties:
+#            Path: /
+#            Method: GET
+#        API:
+#          Type: Api
+#          Properties:
+#            Path: /{proxy+}
+#            Method: ANY
 
   jsFunction:
     Type: AWS::Serverless::Function
