@@ -4,7 +4,7 @@ set -veuo pipefail
 
 declare OPT debug host=localhost out port=3000 dir src template url params
 
-trap 'pkill sam' ERR
+#trap 'pkill sam' ERR
 
 while getopts "D:d:h:o:P:p:s:t:u:" OPT
 do
@@ -26,9 +26,9 @@ shift $((${OPTIND}-1))
 if [ ! ${url-} ]
 then
     url=http://${host}:${port}/
-    trap 'kill -SIGINT %1; docker kill mysql' EXIT
+    trap 'kill -SIGINT %1; docker rm --force --volumes mysql' EXIT
 
-    docker run --name mysql --rm \
+    docker run --name mysql --rm -d \
     		--env MYSQL_ROOT_PASSWORD=rootpasswd \
     		--env MYSQL_DATABASE=wordpress \
     		--env MYSQL_PASSWORD=wordpress \

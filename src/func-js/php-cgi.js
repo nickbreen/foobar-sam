@@ -64,27 +64,22 @@ function base64EncodeBodyIfRequired(response)
 {
     const [, contentType] = getResponseHeader(response, 'content-type');
 
-    // const [contentLengthHeader, contentLength] = getResponseHeader(response, 'content-length');
-
     const mimeType = MIMEType.parse(contentType);
 
     const base64Encoded = mimeType.type !== 'text';
 
-    const responseBody = base64Encoded ?
+    const responseBody = base64Encoded && response.body ?
         Buffer.from(response.body, 'utf8').toString('base64') :
         JSON.stringify(response.body);
-
-    // if (contentLength !== responseBody.length)
-    // {
-    //     response.headers[contentLengthHeader] = responseBody.length;
-    // }
 
     return {base64Encoded, responseBody};
 }
 
 function base64DecodeBodyIfRequired(event)
 {
-    return event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
+    return event.isBase64Encoded && event.body ?
+        Buffer.from(event.body, 'base64').toString('utf8') :
+        event.body;
 }
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
@@ -102,7 +97,7 @@ async function handler(event, context)
         throw new Error("No script specified in environment variable SCRIPT: " + process.env.SCRIPT);
     }
 
-    fs.accessSync(process.env.SCRIPT, fs.constants.R_OK)
+    fs.accessSync(process.env.SCRIPT, fs.constants.R_OK);
 
     const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
@@ -142,4 +137,5 @@ async function handler(event, context)
     }
 }
 
+// noinspection JSUnusedGlobalSymbols
 module.exports = exports = {handler};
