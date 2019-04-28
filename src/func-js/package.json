@@ -6,9 +6,7 @@
   },
   "devDependencies": {},
   "files": [
-    "php-cgi.js",
-    "php-cli.js",
-    "php-svr.js"
+    "php-cgi.js"
   ],
   "engines": {
     "node": "~8.10"

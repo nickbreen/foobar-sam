@@ -16,7 +16,7 @@ function extractPhpSpecificEnvironmentVariableFromEvent(event)
 {
     return {
         REDIRECT_STATUS: 200,
-        SCRIPT_FILENAME: "index.php",
+        SCRIPT_FILENAME: process.env.SCRIPT || "index.php",
         REQUEST_URI: event.path
     };
 }
@@ -35,7 +35,7 @@ function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
         REMOTE_IDENT: null,
         REMOTE_USER: null,
         REQUEST_METHOD: event.httpMethod,
-        SCRIPT_NAME: "index.php",
+        SCRIPT_NAME: process.env.SCRIPT || "index.php",
         SERVER_NAME: event.headers['Host'],
         SERVER_PORT: event.headers['X-Forwarded-Port'],
         SERVER_PROTOCOL: event.protocol,

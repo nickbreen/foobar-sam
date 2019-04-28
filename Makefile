@@ -21,7 +21,7 @@ composer_version = 1.8.5
 
 .PHONY: clean outdated update int acc til
 
-sam_deps = src/sam.yaml out/func-php out/layer-php/layer-1.d out/func-js
+sam_deps = src/sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
 
 clean:
 	rm -rf out/*
@@ -32,27 +32,22 @@ deploy: out/sam.yaml
 out/sam.yaml: $(sam_deps)
 	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
 
-# Application/Function
+# Function
 
-src/func-php/composer.phar:
-	curl -fJLR -z ${@} -o ${@} https://getcomposer.org/download/$(composer_version)/composer.phar
-	curl -fJLR -z ${@}.sha256sum -o ${@}.sha256sum https://getcomposer.org/download/$(composer_version)/composer.phar.sha256sum
-	cd ${@D}; sha256sum -c ${@F}.sha256sum
-	chmod +x ${@}
+out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/*.php out/php.ini
+	rm -rf $@; mkdir $@
+	cp -t $@ $^
+	cd $@; npm install
 
-out/func-php: src/func-php/composer.json src/func-php/composer.lock src/func-php/handler.php src/func-php/wp-config.php
+# Layer PHP application
+
+out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
-out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/index.php out/php.ini
-	rm -rf $@; mkdir $@
-	cp -t $@ $^
-	cd $@; npm install
-
-src/test/event.json:
-	sam local generate-event apigateway aws-proxy > $@
+# Layer PHP runtime
 
 out/php.ini: src/layer-php/php-src-php-$(php_version).tar.gz
 	tar xf $< -O php-src-php-7.3.4/php.ini-production > $@
@@ -102,28 +97,28 @@ src/img2lambda/img2lambda.tar-$(img2lambda_version).gz:
 
 # Dev Utilities
 
-install: src/func-php
+install: src/layer-wp
 	$(composer) install --working-dir=$< --prefer-dist
 
-outdated: src/func-php
+outdated: src/layer-wp
 	$(composer) outdated --working-dir=$< --direct --strict
 
-update: src/func-php
+update: src/layer-wp
 	$(composer) update --working-dir=$< --prefer-dist
 
 # Testing
 
+src/test/event.json:
+	sam local generate-event apigateway aws-proxy > $@
+
 int: out/test/int
-out/test/int: $(sam_deps) src/test/event.json src/test/xFunction.expected FORCE
+out/test/int: $(sam_deps) src/test/event.json src/test/expected.out FORCE
 	rm -rf $@; mkdir -p $@
 
-#	sam local invoke --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . phpFunction > $@/phpFunction.out
-#	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/phpFunction.out > $@/phpFunction.actual
-#	diff src/test/xFunction.expected $@/phpFunction.actual
-
-	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --event src/test/event.json --template src/sam.yaml --docker-volume-basedir . jsFunction > $@/jsFunction.out
-	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/jsFunction.out > $@/jsFunction.actual
-	diff src/test/xFunction.expected $@/jsFunction.actual
+	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --event src/test/event.json --template src/sam.yaml \
+			--docker-volume-basedir . function > $@/function.out
+	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
+	diff src/test/expected.out $@/actual.out
 
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE

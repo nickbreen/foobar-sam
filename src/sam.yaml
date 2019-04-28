@@ -2,35 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: PHP Lambda
 Transform: AWS::Serverless-2016-10-31
 Resources:
-#  phpFunction:
-#    Type: AWS::Serverless::Function
-#    Properties:
-#      FunctionName: !Sub ${AWS::StackName}-wp
-#      Runtime: provided
-#      CodeUri: out/func-php
-#      Handler: handler.php
-#      MemorySize: 256
-#      Timeout: 5
-#      Tracing: Active
-#      Layers:
-#        - !Ref phpLayer
-#      Environment:
-#        Variables:
-#          SomeVar: some-var
-#          SOME_VAR: some var
-#      Events:
-#        RootAPI:
-#          Type: Api
-#          Properties:
-#            Path: /
-#            Method: GET
-#        API:
-#          Type: Api
-#          Properties:
-#            Path: /{proxy+}
-#            Method: ANY
-
-  jsFunction:
+  function:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
@@ -41,18 +13,18 @@ Resources:
       Timeout: 5
       Tracing: Active
       Layers:
+        - !Ref wpLayer
         - !Ref phpLayer
       Environment:
         Variables:
-          SomeVar: some-var
-          SOME_VAR: some var
+          SCRIPT: wp.php
       Events:
-        RootAPI:
+        root:
           Type: Api
           Properties:
             Path: /
             Method: GET
-        API:
+        proxy:
           Type: Api
           Properties:
             Path: /{proxy+}
@@ -62,8 +34,15 @@ Resources:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: PHP
-      Description: PHP Runtime
+      Description: PHP runtime
       ContentUri: out/layer-php/layer-1.d
+
+  wpLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: WordPress
+      Description: PHP application
+      ContentUri: out/layer-wp
 
 Outputs:
   Endpoint:
