@@ -1,50 +1,97 @@
 
-# CI
+# Prerequisites
 
-Use [LambCI](https://github.com/lambci/lambci#php). 
+- make
+- [aws sam cli][] & [aws cli][] 
+- docker
+- jq 1.6+ (required for base64 decoding)
+- diffutils
+- dos2unix
+- nodejs 8.10+ & npm
 
-    make deploy-ci
+# Usage
 
-Then any push to master or a tag will trigger CI.
+...Work in Progress
 
-# Local Build
+0. Fork/clone this repository. 
 
-    make 
-    
-# Deploy
-
-    make deploy
-    
-# Test  
-    
-**TODO**: Use https://github.com/lambci/docker-lambda
-**TODO**: PHPUnit with wp-content/vendor/bin/phpunit
-
-
-# WP
-
-- [Giving WordPress Its Own Directory](https://codex.wordpress.org/Giving_WordPress_Its_Own_Directory)
-- [Moving wp-content folder](https://codex.wordpress.org/Editing_wp-config.php#Moving_wp-content_folder)
-
-
-# PHP/tmp/php-7.0.11/compiled/
-
-- [Required PHP extensions](https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
-- Compile in docker with with [amazonlinux:1-wth-sources](https://hub.docker.com/_/amazonlinux)
-- CGI: https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
+1. **WIP** Edit `src/layer-wp/composer.json` to add the required themes, 
+   plugins, and any other libraries. Then update `composer.lock` with 
+   `make update`.
    
-- FFS: https://github.com/awslabs/aws-lambda-container-image-converter/blob/master/example/Dockerfile
+   Or replace it entirely with your own composer project!
+   
+2. **WIP** Edit `wp-config.php` to suit.    
+
+3. **WIP** Edit src/sam.yaml to change environment variables and parameters
+   to suit your deployment. E.g. specify database host/user/pass/name
+
+4. Test with `make int` to 'integration' test the function, 
+   test with `make acc` to 'acceptance' test via API.
+
+5. Deploy with `make deploy` and then test with `make til` to 'test in 
+   live' via the real API gateway.
 
 # Structure
 
-- Lambda Layers
-  - PHP
-  - AWS PHP SDK - if using for runtime SSM Parameters
-  - WordPress
-- Lambda Function
-  - wp-config.php
-    - use SDK to get SSM Parameter Store parameters at runtime?
-    - OR; pull from environment (like in foobar-wp-cf)
-  - Environment Variables 
-    - pull from environment (like in foobar-wp-cf) at deploy time
+- CloudFormation template (src/sam.yaml) with SAM transform
+  - lambda function, nodejs 8.10 (src/func-js)
+    
+    handles lambda events and hands off to PHP [CGI 1.1]
+    
+  - lambda layer, PHP 7.3.4 runtime CLI & CGI (src/layer-php)
+  
+    built based on [img2lambda example]
+    
+  - lambda layer, composer managed WordPress app (src/layer-wp)
+  
+    built based on [john bloch]
 
+# References
+
+## PHP
+- [Required PHP extensions][]
+- [Laravel via CGI][]
+- [CGI 1.1][]
+- [img2lambda example][]
+
+## SAM
+- [AWS Serverless Application Model (SAM)][]
+- [SAM 2016-10-31][]
+- [sam local invoke][]
+
+## WP
+
+- [Giving WordPress Its Own Directory][]
+- [Moving wp-content folder][]
+
+## Other 
+
+- [LambCI][]
+- [LambCI Docker][]
+
+# TODO 
+
+- PHPUnit with wp-content/vendor/bin/phpunit
+
+
+
+[aws cli]: https://github.com/aws/aws-cli
+[aws sam cli]: https://github.com/awslabs/aws-sam-cli
+
+
+[Required PHP extensions]: https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions
+[Laravel via CGI]: https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
+[CGI 1.1]: http://www.faqs.org/rfcs/rfc3875.html
+[img2lambda example]: https://github.com/awslabs/aws-lambda-container-image-converter/blob/master/example
+
+[AWS Serverless Application Model (SAM)]: https://github.com/awslabs/serverless-application-model
+[SAM 2016-10-31]: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md
+[sam local invoke]: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-invoke.html]
+
+[john bloch]: https://code.johnpbloch.com/category/wordpress/
+[Giving WordPress Its Own Directory]: https://codex.wordpress.org/Giving_WordPress_Its_Own_Directory
+[Moving wp-content folder]: https://codex.wordpress.org/Editing_wp-config.php#Moving_wp-content_folder
+
+[LambCI]: https://github.com/lambci/lambci#php
+[LambCI Docker]: https://github.com/lambci/docker-lambda
