@@ -26,8 +26,12 @@
 3. **WIP** Edit src/sam.yaml to change environment variables and parameters
    to suit your deployment. E.g. specify database host/user/pass/name
 
-4. Test with `make int` to 'integration' test the function, 
-   test with `make acc` to 'acceptance' test via API.
+4. Test with `make test` to 'integration' test the function and API with 
+   a simple script that echos the request body as the response body.  
+
+5. Test with `make int` to 'acceptance' test via AP with the same echo script.
+
+5. Test with `make acc` to 'acceptance' test via API with WordPress.
 
 5. Deploy with `make deploy` and then test with `make til` to 'test in 
    live' via the real API gateway.

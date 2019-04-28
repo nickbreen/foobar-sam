@@ -19,7 +19,7 @@ img2lambda_version = 0.1.1
 php_version = 7.3.4
 composer_version = 1.8.5
 
-.PHONY: clean outdated update int acc til
+.PHONY: clean outdated update test int acc til
 
 sam_deps = src/sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
 
@@ -114,8 +114,8 @@ src/test/expected.json:
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
-int: out/test/int
-out/test/int: $(sam_deps) src/test/event.json src/test/expected.out FORCE
+test: out/test/test
+out/test/test: $(sam_deps) src/test/event.json src/test/expected.out FORCE
 	rm -rf $@; mkdir -p $@
 
 	sam local invoke \
@@ -128,8 +128,8 @@ out/test/int: $(sam_deps) src/test/event.json src/test/expected.out FORCE
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
 	diff src/test/expected.out $@/actual.out
 
-acc: out/test/acc
-out/test/acc: src/test/* $(sam_deps) FORCE
+int: out/test/int
+out/test/int: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
 	src/test/test.sh \
 			$(patsubst %,-d %,$(DEBUG_PORT)) \
@@ -138,6 +138,17 @@ out/test/acc: src/test/* $(sam_deps) FORCE
 			-o $@ \
 			-t $(realpath src/sam.yaml) \
 			-P ParameterKey=script,ParameterValue=echo.php
+
+acc: out/test/acc
+out/test/acc: src/test/* $(sam_deps) FORCE
+	rm -rf $@; mkdir -p $@
+	src/test/test.sh -m \
+			$(patsubst %,-d %,$(DEBUG_PORT)) \
+			-s src/test \
+			-D . \
+			-o $@ \
+			-t $(realpath src/sam.yaml) \
+			-P ParameterKey=script,ParameterValue=wp.php
 
 til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
 	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')

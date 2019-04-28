@@ -8,6 +8,18 @@ Parameters:
     AllowedValues:
       - wp.php
       - echo.php
+  dbHost:
+    Type: String
+    Default: localhost:3306
+  dbName:
+    Type: String
+    Default: wordpress
+  dbUser:
+    Type: String
+    Default: wordpress
+  dbPass:
+    Type: String
+    Default: wordpress
 Globals:
   Api:
     BinaryMediaTypes: # https://github.com/awslabs/serverless-application-model/blob/master/examples/2016-10-31/implicit_api_settings/template.yaml
@@ -33,10 +45,10 @@ Resources:
       Environment:
         Variables:
           SCRIPT: !Ref script
-          WP_DATABASE_NAME: wordpress
-          WP_DATABASE_USER: wordpress
-          WP_DATABASE_PASSWORD: wordpress
-          WP_DATABASE_HOST: localhost
+          WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_NAME: !Ref dbName
+          WP_DATABASE_USER: !Ref dbUser
+          WP_DATABASE_PASSWORD: !Ref dbPass
       Events:
         root:
           Type: Api
