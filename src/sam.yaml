@@ -11,6 +11,9 @@ Parameters:
   dbHost:
     Type: String
     Default: localhost:3306
+  dbPort:
+    Type: String
+    Default: 3306
   dbName:
     Type: String
     Default: wordpress
@@ -46,6 +49,7 @@ Resources:
         Variables:
           SCRIPT: !Ref script
           WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
           WP_DATABASE_PASSWORD: !Ref dbPass

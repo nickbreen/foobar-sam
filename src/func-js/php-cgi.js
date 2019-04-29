@@ -70,7 +70,7 @@ function base64EncodeBodyIfRequired(response)
 
     const responseBody = base64Encoded && response.body ?
         Buffer.from(response.body, 'utf8').toString('base64') :
-        JSON.stringify(response.body);
+        response.body;
 
     return {base64Encoded, responseBody};
 }
@@ -101,26 +101,30 @@ async function handler(event, context)
 
     const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
-    const php = spawnSync(
-        '/opt/bin/php-cgi',
-        [
-            '-d', 'php.ini',
-            '-d', 'memory_limit=' + context.memoryLimitInMB + 'M',
-            '-d', 'max_execution_time=' + Math.trunc(context.getRemainingTimeInMillis() / 1000),
-            '-d', 'default_mimetype=application/octet-stream',
-            '-d', 'default_charset=UTF-8',
-            '-d', 'upload_max_filesize=2M',
-            '-d', 'cgi.discard_path=1',
-            '-d', 'cgi.rfc2616_headers=1',
-            '-d', 'session.save_handler', // unset
-            '-d', 'opcache.enable=1',
-            '-d', 'enable_post_data_reading=Off' // this will probably break WordPress
-        ],
-        {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: requestBody});
+    const args = [
+        '-d', 'php.ini',
+        '-d', 'memory_limit=' + context.memoryLimitInMB + 'M',
+        '-d', 'max_execution_time=' + Math.trunc(context.getRemainingTimeInMillis() / 1000),
+        '-d', 'default_mimetype=application/octet-stream',
+        '-d', 'default_charset=UTF-8',
+        '-d', 'upload_max_filesize=2M',
+        '-d', 'cgi.discard_path=1',
+        '-d', 'display_errors=On',
+        '-d', 'display_startup_errors=On',
+        '-d', 'cgi.rfc2616_headers=1',
+        '-d', 'session.save_handler', // unset
+        '-d', 'opcache.enable=1',
+        '-d', 'enable_post_data_reading=Off' // this will probably break WordPress
+    ];
+    const opts = {cwd: process.env.LAMBDA_TASK_ROOT, env: env, input: requestBody};
+
+    const php = spawnSync('/opt/bin/php-cgi', args, opts);
 
     if (php.status === 0)
     {
-        const response = parseResponse(php.stdout.toString('utf8'));
+        let cgiResponse = php.stdout.toString('utf8');
+
+        const response = parseResponse(cgiResponse);
 
         const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(response);
 
