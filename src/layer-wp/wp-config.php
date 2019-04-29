@@ -1,8 +1,8 @@
 <?php
-define( 'DB_NAME', getenv('WP_DATABASE_NAME') );
-define( 'DB_USER', getenv('WP_DATABASE_USER') );
-define( 'DB_PASSWORD', getenv('WP_DATABASE_PASSWORD') );
-define( 'DB_HOST', getenv('WP_DATABASE_HOST').':'.getenv('WP_DATABASE_PORT') );
+define( 'DB_NAME', getenv( 'WP_DATABASE_NAME' ) );
+define( 'DB_USER', getenv( 'WP_DATABASE_USER' ) );
+define( 'DB_PASSWORD', getenv( 'WP_DATABASE_PASS' ) );
+define( 'DB_HOST', getenv( 'WP_DATABASE_HOST' ) . ':' . getenv( 'WP_DATABASE_PORT' ) );
 define( 'DB_CHARSET', 'utf8' );
 define( 'DB_COLLATE', '' );
 

@@ -10,9 +10,9 @@ Parameters:
       - echo.php
   dbHost:
     Type: String
-    Default: localhost:3306
+    Default: localhost
   dbPort:
-    Type: String
+    Type: Integer
     Default: 3306
   dbName:
     Type: String
@@ -40,7 +40,7 @@ Resources:
       CodeUri: out/func-js
       Handler: php-cgi.handler
       MemorySize: 256
-      Timeout: 5
+      Timeout: 90
       Tracing: Active
       Layers:
         - !Ref wpLayer
@@ -52,7 +52,7 @@ Resources:
           WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
-          WP_DATABASE_PASSWORD: !Ref dbPass
+          WP_DATABASE_PASS: !Ref dbPass
       Events:
         root:
           Type: Api
