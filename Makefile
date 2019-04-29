@@ -55,7 +55,7 @@ out/php.ini: src/layer-php/php-src-php-$(php_version).tar.gz
 out/layer-php/image: tag = layer-php:latest
 out/layer-php/image: src/img2lambda/linux-amd64-img2lambda src/layer-php/*
 	rm -rf $@; mkdir -p ${@D}
-	docker build --tag $(tag) src/layer-php
+	docker build --tag $(tag) --build-arg php_version=7.3.4 src/layer-php
 	docker run --rm -i $(tag) handler.php 'Hello Lambda!'
 	docker save $(tag) --output $@
 

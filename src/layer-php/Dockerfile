@@ -27,17 +27,18 @@ RUN sed -i 's;^releasever.*;releasever=2017.03;;' /etc/yum.conf && \
 
 RUN yum install -y libpng-devel lib-jpeg-turbo-devel file diffutils
 
-
 ARG php_version=7.3.4
 ARG php_src=php-src-php-${php_version}.tar.gz
+ARG php_src_dir=php-src-php-${php_version}
 ADD ${php_src} /opt/src
-WORKDIR /opt/src/php-src-php-${php_version}
+WORKDIR /opt/src/${php_src_dir}
 RUN ./buildconf --force
 RUN ./configure --prefix=/opt/ --enable-option-checking=fatal \
         --with-openssl --with-curl --with-zlib --without-pear --disable-phar \
         --with-mhash --enable-mbstring --enable-mysqlnd \
         --with-mysqli --enable-exif --enable-filter --enable-fileinfo --enable-xml --with-gd --enable-xmlreader
-RUN make install
+#RUN make -j test
+RUN make -j install
 RUN /opt/bin/php -v
 RUN /opt/bin/php-cgi -v
 
