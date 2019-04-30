@@ -5,56 +5,6 @@ const MIMEType = require('whatwg-mimetype');
 const fs = require('fs');
 const net = require('net');
 
-function extractPhpHeaderEnvironmentVariablesFromEvent(event)
-{
-    return Object.entries(event.headers).reduce((acc, [header, value]) =>
-    {
-        acc['HTTP_' + header.toUpperCase().replace(/-/g, '_')] = value;
-        return acc;
-    }, {});
-}
-
-function extractPhpSpecificEnvironmentVariableFromEvent(event, script)
-{
-    return {
-        // REDIRECT_STATUS: 200, // required if cgi.force_redirect=1
-        SCRIPT_FILENAME: script,
-        REQUEST_URI: event.path
-    };
-}
-
-function extractCgiEnvironmentVariablesFromEvent(event, contentLength, script)
-{
-    return {
-        CONTENT_LENGTH: contentLength,
-        CONTENT_TYPE: event.headers['Content-Type'] || 'application/octet-stream',
-        GATEWAY_INTERFACE: '1.1',
-        PATH_INFO: event.path,
-        PATH_TRANSLATED: event.path,
-        QUERY_STRING: querystring.stringify(event.queryStringParameters),
-        REMOTE_ADDR: event.requestContext.identity.sourceIp,
-        REMOTE_HOST: event.requestContext.identity.sourceIp,
-        REMOTE_IDENT: null,
-        REMOTE_USER: null,
-        REQUEST_METHOD: event.httpMethod,
-        SCRIPT_NAME: script,
-        SERVER_NAME: event.headers['Host'],
-        SERVER_PORT: event.headers['X-Forwarded-Port'],
-        SERVER_PROTOCOL: event.headers['X-Forwarded-Proto'],
-        SERVER_SOFTWARE: process.env['_HANDLER']
-    };
-}
-
-function extractEnvironmentVariablesFromEvent(event, contentLength, script)
-{
-    return Object.assign(
-        {},
-        process.env,
-        extractCgiEnvironmentVariablesFromEvent(event, contentLength, script),
-        extractPhpSpecificEnvironmentVariableFromEvent(event, script),
-        extractPhpHeaderEnvironmentVariablesFromEvent(event));
-}
-
 function findHeader(headers, headerName)
 {
     return Object.entries(headers)
@@ -85,30 +35,75 @@ function base64DecodeBodyIfRequired(event, mimeType)
     }
 }
 
-function extractBodyAndEnvironmentVariablesFromEvent(event, script)
+function extractBodyAndEnvironmentVariablesFromEvent(event)
 {
+    const {script, pathTranslated} = translatePath(event);
+
     const [, requestContentType] = findHeader(event.headers, 'content-type');
     const requestMimeType = MIMEType.parse(requestContentType);
 
     const requestBody = base64DecodeBodyIfRequired(event, requestMimeType);
     const contentLength = requestBody ? requestBody.length : null;
-    const env = extractEnvironmentVariablesFromEvent(event, contentLength, script);
+    const env = Object.assign(
+        {},
+        process.env,
+        {
+            CONTENT_LENGTH: contentLength,
+            CONTENT_TYPE: event.headers['Content-Type'] || 'application/octet-stream',
+            GATEWAY_INTERFACE: '1.1',
+            PATH_INFO: event.path,
+            PATH_TRANSLATED: pathTranslated,
+            QUERY_STRING: querystring.stringify(event.queryStringParameters),
+            REMOTE_ADDR: event.requestContext.identity.sourceIp,
+            REMOTE_HOST: event.requestContext.identity.sourceIp,
+            REMOTE_IDENT: null,
+            REMOTE_USER: null,
+            REQUEST_METHOD: event.httpMethod,
+            SCRIPT_NAME: script,
+            SERVER_NAME: event.headers['Host'],
+            SERVER_PORT: event.headers['X-Forwarded-Port'],
+            SERVER_PROTOCOL: event.headers['X-Forwarded-Proto'],
+            SERVER_SOFTWARE: process.env['_HANDLER']
+        },
+        {
+            // REDIRECT_STATUS: 200, // required if cgi.force_redirect=1
+            SCRIPT_FILENAME: script,
+            REQUEST_URI: event.path
+        },
+        Object.entries(event.headers).reduce((acc, [header, value]) =>
+        {
+            acc['HTTP_' + header.toUpperCase().replace(/-/g, '_')] = value;
+            return acc;
+        }, {}));
+
     return {requestBody, env};
 }
 
-function extractScript()
+const roots = [process.env.LAMBDA_TASK_ROOT, "/opt"];
+const scriptMod = fs.constants.R_OK | fs.constants.X_OK
+function translatePath(event)
 {
-    const script = process.env.SCRIPT || 'index.php'; // TODO resolve from path, with fallback
-    console.error(script);
-    fs.accessSync(script, fs.constants.R_OK); // TODO fs.constants.R_OK | fs.constants.X_OK
-    return script;
+    const index = process.env.SCRIPT;
+    // TODO translate PATH into PATH_TRANSLATED
+    //  if it's a dir:
+    //      recurse ${PATH}/${index} # catches .../ => .../${index}
+    //  if it's a file:
+    //      if php and readable (and executable?) then cgi # catches ./${index}/ => CGI
+    //      if not php and readable then serve it # catches ./some.gif => served
+    //      else 403
+    //  else /${index}/${PATH_INFO} => CGI
+    //  !! but does not handle direct requests for .../some.php/${PATH_INFO} should it?
+    //  find out how Apache HTTPd does it!!
+
+    const script = index;
+    fs.accessSync(script, fs.constants.R_OK);
+    const pathTranslated = event.path;
+    return {script, pathTranslated};
 }
 
 async function handler(event, context)
 {
-    const script = extractScript();
-
-    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event, script);
+    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
     const args = [
         '-d', 'php.ini',
