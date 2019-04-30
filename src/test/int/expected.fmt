@@ -1,0 +1,4 @@
+%{http_code}\n
+%{content_type}\n
+%{size_download}\n
+%{redirect_url}\n

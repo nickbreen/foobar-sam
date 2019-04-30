@@ -40,7 +40,7 @@ function extractCgiEnvironmentVariablesFromEvent(event, contentLength, script)
         SCRIPT_NAME: script,
         SERVER_NAME: event.headers['Host'],
         SERVER_PORT: event.headers['X-Forwarded-Port'],
-        SERVER_PROTOCOL: event.protocol,
+        SERVER_PROTOCOL: event.headers['X-Forwarded-Proto'],
         SERVER_SOFTWARE: process.env['_HANDLER']
     };
 }
@@ -63,6 +63,10 @@ function findHeader(headers, headerName)
 
 function base64EncodeBodyIfRequired(body, mimeType)
 {
+    if (!body)
+    {
+        return {base64Encoded: false, responseBody: null};
+    }
     const base64Encoded = mimeType.type !== 'text';
     const charset = mimeType && mimeType.parameters.has("charset") ? mimeType.parameters.get("charset") : 'utf8';
     const responseBody = base64Encoded && body ?
@@ -95,33 +99,16 @@ function extractBodyAndEnvironmentVariablesFromEvent(event, script)
 function extractScript()
 {
     const script = process.env.SCRIPT || 'index.php'; // TODO resolve from path, with fallback
-
+    console.error(script);
     fs.accessSync(script, fs.constants.R_OK); // TODO fs.constants.R_OK | fs.constants.X_OK
     return script;
 }
-
-var mysql = require('mysql');
 
 async function handler(event, context)
 {
     const script = extractScript();
 
     const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event, script);
-
-    var db = mysql.createConnection({
-        host: process.env.WP_DATABASE_HOST,
-        port: process.env.WP_DATABASE_PORT,
-        user: process.env.WP_DATABASE_USER,
-        password: process.env.WP_DATABASE_PASS,
-        database: process.env.WP_DATABASE_NAME
-    });
-    db.connect(function(err){
-        if (err) console.error(err);
-        else console.log('connected');
-    });
-    db.query("SELECT 1")
-        .on('result', (data) => console.error('data: %s', data))
-        .on('end', () => console.error('end'));
 
     const args = [
         '-d', 'php.ini',
@@ -148,7 +135,7 @@ async function handler(event, context)
         stdio: ['pipe', 'pipe', 'inherit']
     };
 
-    const php = spawnSync('/opt/bin/php-cgi', args, opts);
+    const php = spawnSync('/opt/bin/php-cgi', args, opts); // TODO async
 
     if (php.status === 0)
     {

@@ -22,21 +22,6 @@ do
 done
 shift $((${OPTIND}-1))
 
-
-if [ ${mysql-} ]
-then
-    cont_id=$(docker run --rm -d -P \
-    		--env MYSQL_ROOT_PASSWORD=rootpasswd \
-    		--env MYSQL_DATABASE=wordpress \
-    		--env MYSQL_PASSWORD=wordpress \
-    		--env MYSQL_USER=wordpress \
-    		mysql)
-
-	db_host=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' ${cont_id}):$(docker port ${cont_id} 3306/tcp | cut -d: -f2)
-
-    trap "docker kill ${cont_id}" EXIT
-fi
-
 if [ ! ${url-} ]
 then
     url=http://${host}:${port}/

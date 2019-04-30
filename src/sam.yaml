@@ -4,10 +4,7 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
   script:
     Type: String
-    Default: wp.php
-    AllowedValues:
-      - wp.php
-      - echo.php
+    Default:
   dbHost:
     Type: String
     Default: localhost

@@ -120,6 +120,7 @@ debug-%: DEBUG_PORT = 5858
 debug-echo: test-echo
 debug-db: test-db
 debug-wp: test-wp
+debug-int: int
 
 test-echo: out/test/test-echo
 test-db: out/test/test-db
@@ -183,15 +184,28 @@ kill-mysql:
 	@rm out/test/mysql.*
 
 int: out/test/int
+out/test/int: db_host = $(file < out/test/mysql.addr)
 out/test/int: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
-	src/test/test.sh \
-			$(patsubst %,-d %,$(DEBUG_PORT)) \
-			-s src/test \
-			-D . \
-			-o $@ \
-			-t $(realpath src/sam.yaml) \
-			-P ParameterKey=script,ParameterValue=echo.php
+
+	if ! curl -fs localhost:3000 > /dev/null; then\
+		sam local start-api --skip-pull-image $(patsubst %,--debug-port %,$(DEBUG_PORT)) --port 3000 \
+				--template src/sam.yaml \
+				--docker-volume-basedir . \
+				--parameter-overrides "\
+					ParameterKey=script,ParameterValue=wp.php \
+					ParameterKey=dbHost,ParameterValue=$(db_host) \
+					ParameterKey=dbName,ParameterValue=$(db_name) \
+					ParameterKey=dbUser,ParameterValue=$(db_user) \
+					ParameterKey=dbPass,ParameterValue=$(db_pass) \
+				" & \
+		sleep 5s; \
+	fi
+
+	curl -vi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
+	cat $@/actual.1.response
+	diff src/test/int/expected.1.txt $@/actual.1.txt
+
 
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE
