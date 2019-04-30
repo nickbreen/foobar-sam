@@ -114,101 +114,73 @@ src/test/expected.json:
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
-test: out/test/test-echo
-out/test/test-echo: $(sam_deps) src/test/event.json src/test/expected.out FORCE
-	rm -rf $@; mkdir -p $@
+test: out/test/test-echo out/test/test-db out/test/test-wp
 
-	sam local invoke \
-			$(patsubst %,--debug-port %,$(DEBUG_PORT)) \
-			--event src/test/event.json \
-			--template src/sam.yaml \
-			--docker-volume-basedir . \
-			--parameter-overrides ParameterKey=script,ParameterValue=echo.php \
-			function > $@/function.out
-	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
-	diff src/test/expected.out $@/actual.out
+debug-%: DEBUG_PORT = 5858
+debug-echo: test-echo
+debug-db: test-db
+debug-wp: test-wp
 
-debug-wp: DEBUG_PORT = 5858
-debug-wp: out/test/test-wp
-
+test-echo: out/test/test-echo
+test-db: out/test/test-db
 test-wp: out/test/test-wp
-out/test/test-wp: net_id = $(file < out/test/mysql.net)
-out/test/test-wp: db_host = $(file < out/test/mysql.addr)
-out/test/test-wp: db_port = $(file < out/test/mysql.port)
-out/test/test-wp: $(sam_deps) src/test/event.json src/test/expected.out $(addprefix out/test/mysql., net addr port) FORCE
+
+out/test/test-%: db_host = $(file < out/test/mysql.addr)
+out/test/test-%: $(sam_deps) src/test/event.json src/test/expected.out out/test/mysql.addr FORCE
 	rm -rf $@; mkdir -p $@
 
-	test -n "$(net_id)"
 	test -n "$(db_host)"
-	test -n "$(db_port)"
 	test -n "$(db_name)"
 	test -n "$(db_user)"
 	test -n "$(db_pass)"
 
-#			--docker-network $(net_id)
-	sam local invoke \
-			$(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+	sam local invoke --skip-pull-image $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
 			--event src/test/event.json \
 			--template src/sam.yaml \
 			--docker-volume-basedir . \
 			--parameter-overrides "\
-				ParameterKey=script,ParameterValue=wp.php \
+				ParameterKey=script,ParameterValue=$*.php \
 				ParameterKey=dbHost,ParameterValue=$(db_host) \
-				ParameterKey=dbPort,ParameterValue=$(db_port) \
 				ParameterKey=dbName,ParameterValue=$(db_name) \
 				ParameterKey=dbUser,ParameterValue=$(db_user) \
 				ParameterKey=dbPass,ParameterValue=$(db_pass) \
 			" function > $@/function.out
-	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
-	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out | tee $@/actual.out
-	grep Error $@/actual.out > /dev/null
 
-net_name = mysql
+	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
+	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
+
+	diff src/test/expected.out $@/actual.out || grep Error $@/actual.out > /dev/null
+
 db_name = wordpress
 db_user = wordpress
 db_pass = wordpress
 
-out/test/mysql.net:
-	rm -rf $@; mkdir -p ${@D}
-	docker network ls -f name=$(net_name) || docker network create $(net_name)
-	#| tr -d '\n' | tee $@
-	$(file $(net_name) > $@)
-	test -s $@
+# same as RDS, helps to avoid password version gripes in v8
+mysql_version = 5.6.34
 
 mysql: out/test/mysql.id
-out/test/mysql.id: net_id = $(file < out/test/mysql.net)
-out/test/mysql.id: out/test/mysql.net
+out/test/mysql.id:
 	rm -rf $@; mkdir -p ${@D}
-#--network $(net_id)
 	docker run --rm -d \
-			-e MYSQL_NAME=$(db_name) \
+			-e MYSQL_DATABASE=$(db_name) \
 			-e MYSQL_USER=$(db_user) \
 			-e MYSQL_PASSWORD=$(db_pass) \
 			-e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
-			-P mysql > $@
+			mysql:$(mysql_version) > $@
 	docker ps -f id=$(cont_id)
 	test -s $@
 
-out/test/mysql.addr: net_id = $(file < out/test/mysql.net)
 out/test/mysql.addr: cont_id = $(file < out/test/mysql.id)
-out/test/mysql.addr: out/test/mysql.id out/test/mysql.net
+out/test/mysql.addr: out/test/mysql.id
 	rm -rf $@; mkdir -p ${@D}
 	test -n "$(cont_id)"
-	docker inspect -f '{{.NetworkSettings.Networks.$(net_id).IPAddress}}' $(cont_id) | tr -d '\n' | tee $@
-#	docker inspect -f '{{range .NetworkSettings.Networks}}{{if eq .NetworkID "'$(net_id)'"}}{{.IPAddress}}{{end}}{{end}}' $(cont_id) | tr -d '\n' | tee $@
-	+test -s $@
-
-out/test/mysql.port: cont_id = $(file < out/test/mysql.id)
-out/test/mysql.port: out/test/mysql.id
-	rm -rf $@; mkdir -p ${@D}
-	test -n "$(cont_id)"
-	docker port $(cont_id) 3306/tcp | cut -d: -f2 | tr -d '\n' | tee $@
+	docker inspect -f '{{.NetworkSettings.IPAddress}}' $(cont_id) | tr -d '\n' | tee $@
 	test -s $@
 
 kill-mysql: cont_id = $(file < out/test/mysql.id)
 kill-mysql:
 	test -n "$(cont_id)" && docker stop $(cont_id)
-	@rm out/test/mysql.id
+	@rm out/test/mysql.*
 
 int: out/test/int
 out/test/int: src/test/* $(sam_deps) FORCE

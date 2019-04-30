@@ -3,6 +3,7 @@ const querystring = require('querystring');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
 const fs = require('fs');
+const net = require('net');
 
 function extractPhpHeaderEnvironmentVariablesFromEvent(event)
 {
@@ -13,16 +14,16 @@ function extractPhpHeaderEnvironmentVariablesFromEvent(event)
     }, {});
 }
 
-function extractPhpSpecificEnvironmentVariableFromEvent(event)
+function extractPhpSpecificEnvironmentVariableFromEvent(event, script)
 {
     return {
         // REDIRECT_STATUS: 200, // required if cgi.force_redirect=1
-        SCRIPT_FILENAME: process.env.SCRIPT,
+        SCRIPT_FILENAME: script,
         REQUEST_URI: event.path
     };
 }
 
-function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
+function extractCgiEnvironmentVariablesFromEvent(event, contentLength, script)
 {
     return {
         CONTENT_LENGTH: contentLength,
@@ -36,7 +37,7 @@ function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
         REMOTE_IDENT: null,
         REMOTE_USER: null,
         REQUEST_METHOD: event.httpMethod,
-        SCRIPT_NAME: process.env.SCRIPT,
+        SCRIPT_NAME: script,
         SERVER_NAME: event.headers['Host'],
         SERVER_PORT: event.headers['X-Forwarded-Port'],
         SERVER_PROTOCOL: event.protocol,
@@ -44,13 +45,13 @@ function extractCgiEnvironmentVariablesFromEvent(contentLength, event)
     };
 }
 
-function extractEnvironmentVariablesFromEvent(event, contentLength)
+function extractEnvironmentVariablesFromEvent(event, contentLength, script)
 {
     return Object.assign(
         {},
         process.env,
-        extractCgiEnvironmentVariablesFromEvent(contentLength, event),
-        extractPhpSpecificEnvironmentVariableFromEvent(event),
+        extractCgiEnvironmentVariablesFromEvent(event, contentLength, script),
+        extractPhpSpecificEnvironmentVariableFromEvent(event, script),
         extractPhpHeaderEnvironmentVariablesFromEvent(event));
 }
 
@@ -80,22 +81,47 @@ function base64DecodeBodyIfRequired(event, mimeType)
     }
 }
 
-function extractBodyAndEnvironmentVariablesFromEvent(event)
+function extractBodyAndEnvironmentVariablesFromEvent(event, script)
 {
     const [, requestContentType] = findHeader(event.headers, 'content-type');
     const requestMimeType = MIMEType.parse(requestContentType);
 
     const requestBody = base64DecodeBodyIfRequired(event, requestMimeType);
     const contentLength = requestBody ? requestBody.length : null;
-    const env = extractEnvironmentVariablesFromEvent(event, contentLength);
+    const env = extractEnvironmentVariablesFromEvent(event, contentLength, script);
     return {requestBody, env};
 }
 
+function extractScript()
+{
+    const script = process.env.SCRIPT || 'index.php'; // TODO resolve from path, with fallback
+
+    fs.accessSync(script, fs.constants.R_OK); // TODO fs.constants.R_OK | fs.constants.X_OK
+    return script;
+}
+
+var mysql = require('mysql');
+
 async function handler(event, context)
 {
-    fs.accessSync(process.env.SCRIPT || 'index.php', fs.constants.R_OK);
+    const script = extractScript();
 
-    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
+    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event, script);
+
+    var db = mysql.createConnection({
+        host: process.env.WP_DATABASE_HOST,
+        port: process.env.WP_DATABASE_PORT,
+        user: process.env.WP_DATABASE_USER,
+        password: process.env.WP_DATABASE_PASS,
+        database: process.env.WP_DATABASE_NAME
+    });
+    db.connect(function(err){
+        if (err) console.error(err);
+        else console.log('connected');
+    });
+    db.query("SELECT 1")
+        .on('result', (data) => console.error('data: %s', data))
+        .on('end', () => console.error('end'));
 
     const args = [
         '-d', 'php.ini',
