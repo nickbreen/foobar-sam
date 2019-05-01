@@ -34,12 +34,12 @@ out/sam.yaml: $(sam_deps)
 
 # Function
 
+test: out/func-js | FORCE
+	cd $<; npm test
+
 out/func-js: src/func-js/*
 	rm -rf $@; mkdir $@
-	cp -r --parents -t $@ $^
-
 	tar vc --exclude src/func-js/node_modules $^ | tar vx --directory $@ --strip-components 2
-
 	cd $@; npm install
 
 # Layer PHP application
@@ -112,7 +112,7 @@ update: src/layer-wp
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
-test: out/test/test-echo out/test/test-db out/test/test-wp
+#test: out/test/test-echo out/test/test-db out/test/test-wp
 
 debug-%: DEBUG_PORT = 5858
 debug-echo: test-echo

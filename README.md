@@ -99,7 +99,7 @@ Packages:
 
 [Required PHP extensions]: https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions
 [Laravel via CGI]: https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/
-[CGI 1.1]: http://www.faqs.org/rfcs/rfc3875.html
+[CGI 1.1]: https://tools.ietf.org/html/rfc3875
 [img2lambda example]: https://github.com/awslabs/aws-lambda-container-image-converter/blob/master/example
 
 [AWS Serverless Application Model (SAM)]: https://github.com/awslabs/serverless-application-model

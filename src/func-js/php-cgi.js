@@ -39,7 +39,9 @@ function base64DecodeBodyIfRequired(event, mimeType)
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
 {
-    const {script, pathTranslated} = translatePath(event);
+    const scriptAndPathInfoResolver = new ScriptAndPathInfoResolver(process.env.DOC_ROOT, process.env.DIR_INDEX);
+
+    const scriptAndPathInfo = scriptAndPathInfoResolver.resolveUri(event.path);
 
     const [, requestContentType] = findHeader(event.headers, 'content-type');
     const requestMimeType = MIMEType.parse(requestContentType);
@@ -52,25 +54,24 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
         {
             CONTENT_LENGTH: contentLength,
             CONTENT_TYPE: event.headers['Content-Type'] || 'application/octet-stream',
-            GATEWAY_INTERFACE: '1.1',
-            PATH_INFO: event.path,
-            PATH_TRANSLATED: pathTranslated,
+            GATEWAY_INTERFACE: 'CGI/1.1',
+            PATH_INFO: undefined,
+            PATH_TRANSLATED: undefined,
             QUERY_STRING: querystring.stringify(event.queryStringParameters),
             REMOTE_ADDR: event.requestContext.identity.sourceIp,
             REMOTE_HOST: event.requestContext.identity.sourceIp,
             REMOTE_IDENT: null,
             REMOTE_USER: null,
             REQUEST_METHOD: event.httpMethod,
-            SCRIPT_NAME: script,
+            SCRIPT_NAME: undefined,
             SERVER_NAME: event.headers['Host'],
             SERVER_PORT: event.headers['X-Forwarded-Port'],
-            SERVER_PROTOCOL: event.headers['X-Forwarded-Proto'],
+            SERVER_PROTOCOL: event.requestContext.protocol,
             SERVER_SOFTWARE: process.env['_HANDLER']
         },
+        scriptAndPathInfo,
         {
-            // REDIRECT_STATUS: 200, // required if cgi.force_redirect=1
-            SCRIPT_FILENAME: script,
-            REQUEST_URI: event.path
+            HTTPS: event.headers['X-Forwarded-Proto'],
         },
         Object.entries(event.headers).reduce((acc, [header, value]) =>
         {
@@ -81,29 +82,63 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
     return {requestBody, charset, env};
 }
 
-const roots = [process.env.LAMBDA_TASK_ROOT, "/opt/wp", "/opt/wp-content"];
-const scriptMod = fs.constants.R_OK | fs.constants.X_OK
-function translatePath(event)
+class BadRequest extends Error
 {
-    const index = process.env.DIR_INDEX;
+    constructor(...props)
+    {
+        super(...props);
+        this.name = "Bad Request";
+        this.code = 400;
+    }
+}
 
+class ScriptAndPathInfoResolver
+{
+    constructor(docRoot, dirIndex)
+    {
+        this.mod = fs.constants.R_OK | fs.constants.X_OK;
+        this.docRoot = docRoot;
+        this.dirIndex = dirIndex;
+        // https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_split_path_info
+        this.pathRegExp = /^(.+\.php)(\/.*)?$/;
+    }
 
+    parseScriptAndPathInfo(resolvedPath)
+    {
+        const matches = this.pathRegExp.exec(resolvedPath);
+        return matches ? matches.slice(1, 3) : null;
+    }
 
-    // TODO translate PATH into PATH_TRANSLATED
-    //  if it's a dir:
-    //      recurse ${PATH}/${index} # catches .../ => .../${index}
-    //  if it's a file:
-    //      if php and readable (and executable?) then cgi # catches ./${index}/ => CGI
-    //      if not php and readable then serve it # catches ./some.gif => served
-    //      else 403
-    //  else /${index}/${PATH_INFO} => CGI
-    //  !! but does not handle direct requests for .../some.php/${PATH_INFO} should it?
-    //  find out how Apache HTTPd does it!!
+    resolveUri(requestPath)
+    {
+        // TODO detect actual directories and append "/" if API Gateway still strips them?
+        const requestUri = requestPath.endsWith("/") ? path.resolve(requestPath, this.dirIndex) : requestPath;
 
-    const script = path.resolve(process.env.DOC_ROOT, index);
-    fs.accessSync(script, fs.constants.R_OK);
-    const pathTranslated = event.path;
-    return {script, pathTranslated};
+        const [scriptName, pathInfo] = this.parseScriptAndPathInfo(requestUri) || [
+            path.resolve("/", this.dirIndex),
+            requestPath
+        ];
+        const scriptFileName = scriptName ? path.resolve(this.docRoot, scriptName.slice(1)) : undefined;
+        const pathInfoTranslated = pathInfo ? path.resolve(this.docRoot, pathInfo.slice(1)) : undefined;
+
+        if (scriptFileName && !scriptFileName.startsWith(this.docRoot))
+        {
+            throw new BadRequest(scriptFileName + ' => ' + scriptFileName);
+        }
+
+        if (pathInfoTranslated && !pathInfoTranslated.startsWith(this.docRoot))
+        {
+            throw new BadRequest(pathInfo + ' => ' + pathInfoTranslated);
+        }
+
+        return {
+            PATH_INFO: pathInfo, // CGI/1.1
+            PATH_TRANSLATED: pathInfoTranslated, // CGI/1.1
+            SCRIPT_NAME: scriptName, // CGI/1.1
+            SCRIPT_FILENAME: scriptFileName, // PHP
+            REQUEST_URI: requestPath // PHP
+        };
+    }
 }
 
 async function handler(event, context)
@@ -132,7 +167,7 @@ async function handler(event, context)
         encoding: charset,
         input: requestBody,
         maxBuffer: 8 * 1024 ** 2, // 8M
-        stdio: ['pipe', 'pipe', 'inherit']
+        // stdio: ['pipe', 'pipe', 'inherit']
     };
 
     const php = spawnSync('/opt/bin/php-cgi', args, opts); // TODO async
@@ -160,9 +195,9 @@ async function handler(event, context)
     }
     else
     {
-        throw new Error(php.error);
+        throw new Error(php.stderr.toString());
     }
 }
 
 // noinspection JSUnusedGlobalSymbols
-module.exports = exports = {handler};
+module.exports = exports = {handler, ScriptAndPathInfoResolver, BadRequest};

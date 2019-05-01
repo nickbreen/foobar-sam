@@ -8,10 +8,16 @@
     "http-string-parser": "*",
     "whatwg-mimetype": "*"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "*",
+    "chai": "*"
+  },
   "files": [
     "php-cgi.js"
   ],
+  "scripts": {
+    "test": "NODE_ENV=test mocha '**/*.spec.js'"
+  },
   "engines": {
     "node": "~8.10"
   }
