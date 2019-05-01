@@ -3,7 +3,7 @@ const querystring = require('querystring');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
 const fs = require('fs');
-const net = require('net');
+const path = require('path');
 
 function findHeader(headers, headerName)
 {
@@ -15,7 +15,7 @@ function base64EncodeBodyIfRequired(body, mimeType)
 {
     if (!body)
     {
-        return {base64Encoded: false, responseBody: null};
+        return {base64Encoded: false, responseBody: body};
     }
     const base64Encoded = mimeType.type !== 'text';
     const charset = mimeType && mimeType.parameters.has("charset") ? mimeType.parameters.get("charset") : 'utf8';
@@ -79,11 +79,14 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
     return {requestBody, env};
 }
 
-const roots = [process.env.LAMBDA_TASK_ROOT, "/opt"];
+const roots = [process.env.LAMBDA_TASK_ROOT, "/opt/wp", "/opt/wp-content"];
 const scriptMod = fs.constants.R_OK | fs.constants.X_OK
 function translatePath(event)
 {
-    const index = process.env.SCRIPT;
+    const index = process.env.DIR_INDEX;
+
+
+
     // TODO translate PATH into PATH_TRANSLATED
     //  if it's a dir:
     //      recurse ${PATH}/${index} # catches .../ => .../${index}
@@ -95,7 +98,7 @@ function translatePath(event)
     //  !! but does not handle direct requests for .../some.php/${PATH_INFO} should it?
     //  find out how Apache HTTPd does it!!
 
-    const script = index;
+    const script = path.resolve(process.env.DOC_ROOT, index);
     fs.accessSync(script, fs.constants.R_OK);
     const pathTranslated = event.path;
     return {script, pathTranslated};
@@ -122,7 +125,7 @@ async function handler(event, context)
         '-d', 'enable_post_data_reading=0' // this will probably break WordPress
     ];
     const opts = {
-        cwd: process.env.LAMBDA_TASK_ROOT,
+        cwd: process.env.DOC_ROOT,
         env: env,
         // encoding: 'utf8',
         input: requestBody,

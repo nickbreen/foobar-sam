@@ -68,7 +68,19 @@
 
 - [Giving WordPress Its Own Directory][]
 - [Moving wp-content folder][]
-- [john bloch][]
+- [john bloch][] / [roots.io][]
+
+## Node + CGI
+
+Packages:
+
+- [node-phpcgi][]
+- [cgi][]
+- [gateway][]
+
+[node-phpcgi]: https://www.npmjs.com/package/node-phpcgi
+[cgi]: https://www.npmjs.com/package/cgi
+[gateway]: https://www.npmjs.com/package/gateway
 
 ## Other 
 

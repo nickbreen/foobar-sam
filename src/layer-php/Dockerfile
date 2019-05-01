@@ -44,6 +44,9 @@ RUN /opt/bin/php-cgi -v
 
 # Prepare runtime files
 RUN mkdir -p /lambda-php-runtime/bin && cp /opt/bin/{php,php-cgi} /lambda-php-runtime/bin/
+RUN mkdir -p /lambda-php-runtime/etc && cp /opt/src/${php_src_dir}/php.ini-production /lambda-php-runtime/etc/php.ini
+
+RUN find  /lambda-php-runtime
 
 ARG bootstrap=bootstrap.sh
 COPY ${bootstrap} /lambda-php-runtime/bootstrap

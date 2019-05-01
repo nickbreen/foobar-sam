@@ -34,23 +34,23 @@ out/sam.yaml: $(sam_deps)
 
 # Function
 
-out/func-js: src/func-js/package-lock.json src/func-js/package.json src/func-js/*.js src/func-js/*.php out/php.ini
+out/func-js: src/func-js/*
 	rm -rf $@; mkdir $@
-	cp -t $@ $^
+	cp -r --parents -t $@ $^
+
+	tar vc --exclude src/func-js/node_modules $^ | tar vx --directory $@ --strip-components 2
+
 	cd $@; npm install
 
 # Layer PHP application
 
-out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php
+out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php src/layer-wp/index.php
 	rm -rf $@; mkdir $@
 	cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
 # Layer PHP runtime
-
-out/php.ini: src/layer-php/php-src-php-$(php_version).tar.gz
-	tar xf $< -O php-src-php-7.3.4/php.ini-production > $@
 
 out/layer-php/image: tag = layer-php:latest
 out/layer-php/image: src/img2lambda/linux-amd64-img2lambda src/layer-php/*
@@ -65,12 +65,13 @@ out/layer-php/layer-%.zip: out/layer-php/image
 	rm -rf $@; mkdir -p ${@D}
 	docker load -i $<
 	src/img2lambda/linux-amd64-img2lambda --image $(tag) --dry-run --output-directory ${@D}
-	unzip -vt $@ bin/php bin/php-cgi bootstrap
+	unzip -vt $@ bin/php bin/php-cgi etc/php.ini bootstrap
 
-# make -o out/layer-php/layer-1.zip out/layer-php/layer-1.d  -B
+# make -o out/layer-php/layer-1.zip out/layer-php/layer-1.d -B
 out/layer-php/layer-%.d: out/layer-php/layer-%.zip
 	rm -rf $@; mkdir -p $@
 	unzip -d $@ $<
+	cp -t $@/etc/ out/php.ini
 
 src/layer-php/php-src-php-$(php_version).tar.gz:
 	curl -fJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
@@ -108,9 +109,6 @@ update: src/layer-wp
 
 # Testing
 
-src/test/expected.json:
-	jq -nc '{test:"body"}' | unix2dos > $@
-
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
@@ -122,12 +120,15 @@ debug-db: test-db
 debug-wp: test-wp
 debug-int: int
 
+test-echo: doc_root = /var/task/echo
 test-echo: out/test/test-echo
+test-db: doc_root = /var/task/db
 test-db: out/test/test-db
+test-wp: doc_root = /opt/
 test-wp: out/test/test-wp
 
 out/test/test-%: db_host = $(file < out/test/mysql.addr)
-out/test/test-%: $(sam_deps) src/test/event.json src/test/expected.out out/test/mysql.addr FORCE
+out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/test/mysql.addr FORCE
 	rm -rf $@; mkdir -p $@
 
 	test -n "$(db_host)"
@@ -140,7 +141,7 @@ out/test/test-%: $(sam_deps) src/test/event.json src/test/expected.out out/test/
 			--template src/sam.yaml \
 			--docker-volume-basedir . \
 			--parameter-overrides "\
-				ParameterKey=script,ParameterValue=$*.php \
+				ParameterKey=documentRoot,ParameterValue=$(doc_root) \
 				ParameterKey=dbHost,ParameterValue=$(db_host) \
 				ParameterKey=dbName,ParameterValue=$(db_name) \
 				ParameterKey=dbUser,ParameterValue=$(db_user) \
@@ -150,7 +151,7 @@ out/test/test-%: $(sam_deps) src/test/event.json src/test/expected.out out/test/
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
 
-	diff src/test/expected.out $@/actual.out || grep Error $@/actual.out > /dev/null
+	diff -B src/test/$*/expected.out $@/actual.out || grep Error $@/actual.out > /dev/null
 
 db_name = wordpress
 db_user = wordpress
@@ -185,7 +186,7 @@ kill-mysql:
 
 int: out/test/int
 out/test/int: db_host = $(file < out/test/mysql.addr)
-out/test/int: src/test/* $(sam_deps) FORCE
+out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr FORCE
 	rm -rf $@; mkdir -p $@
 
 	if ! curl -fs localhost:3000 > /dev/null; then\
@@ -193,7 +194,7 @@ out/test/int: src/test/* $(sam_deps) FORCE
 				--template src/sam.yaml \
 				--docker-volume-basedir . \
 				--parameter-overrides "\
-					ParameterKey=script,ParameterValue=wp.php \
+				ParameterKey=documentRoot,ParameterValue=/var/task/$* \
 					ParameterKey=dbHost,ParameterValue=$(db_host) \
 					ParameterKey=dbName,ParameterValue=$(db_name) \
 					ParameterKey=dbUser,ParameterValue=$(db_user) \

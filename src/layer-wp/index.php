@@ -4,5 +4,5 @@ ob_start( function () {
 
 	return false;
 } );
-require_once '/opt/wp-content/vendor/autoload.php';
-require_once '/opt/wp/index.php';
+require_once __DIR__ . '/wp-content/vendor/autoload.php';
+require_once __DIR__ . '/wp/index.php';

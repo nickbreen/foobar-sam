@@ -4,7 +4,7 @@
   "repository": "https://github.com/nickbreen/foobar-sam",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "mysql": "*",
+    "node-phpcgi": "*",
     "http-string-parser": "*",
     "whatwg-mimetype": "*"
   },
