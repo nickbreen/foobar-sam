@@ -1,4 +1,4 @@
-200
-text/plain;charset=UTF-8
+302
+application/octet-stream
 0
-
+http://localhost:3000/wp/wp-admin/install.php

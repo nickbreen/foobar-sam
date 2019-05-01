@@ -2,8 +2,8 @@ const {spawnSync} = require('child_process');
 const querystring = require('querystring');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
-const fs = require('fs');
-const path = require('path');
+const {ScriptAndPathInfoResolver, BadRequest} = require('./script-and-path-info-resolver');
+const {StaticAssetResolver} = require('./static-asset-resolver');
 
 function findHeader(headers, headerName)
 {
@@ -39,9 +39,20 @@ function base64DecodeBodyIfRequired(event, mimeType)
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
 {
-    const scriptAndPathInfoResolver = new ScriptAndPathInfoResolver(process.env.DOC_ROOT, process.env.DIR_INDEX);
+    const requestUri = event.path.endsWith("/") ? path.resolve(event.path, this.dirIndex) : event.path;
 
-    const scriptAndPathInfo = scriptAndPathInfoResolver.resolveUri(event.path);
+    const staticAssetResolver = new StaticAssetResolver(process.env.DIR_INDEX, process.env.DOC_ROOT);
+
+    const maybeStaticFilePath = staticAssetResolver.resolveStaticAsset(requestUri);
+
+    if (maybeStaticFilePath)
+    {
+        // TODO serve it instead of passing to CGI
+    }
+    
+    const scriptAndPathInfoResolver = new ScriptAndPathInfoResolver(process.env.DIR_INDEX, process.env.DOC_ROOT);
+
+    const scriptAndPathInfo = scriptAndPathInfoResolver.resolveCgiScriptNameAndPathInfo(requestUri);
 
     const [, requestContentType] = findHeader(event.headers, 'content-type');
     const requestMimeType = MIMEType.parse(requestContentType);
@@ -66,12 +77,12 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
             SCRIPT_NAME: undefined,
             SERVER_NAME: event.headers['Host'],
             SERVER_PORT: event.headers['X-Forwarded-Port'],
-            SERVER_PROTOCOL: event.requestContext.protocol,
+            SERVER_PROTOCOL: event.requestContext.protocol || 'HTTP/1.1',
             SERVER_SOFTWARE: process.env['_HANDLER']
         },
         scriptAndPathInfo,
         {
-            HTTPS: event.headers['X-Forwarded-Proto'],
+            HTTPS: event.headers['X-Forwarded-Proto'] === 'https' ? 1 : undefined,  // PHP
         },
         Object.entries(event.headers).reduce((acc, [header, value]) =>
         {
@@ -82,71 +93,12 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
     return {requestBody, charset, env};
 }
 
-class BadRequest extends Error
-{
-    constructor(...props)
-    {
-        super(...props);
-        this.name = "Bad Request";
-        this.code = 400;
-    }
-}
-
-class ScriptAndPathInfoResolver
-{
-    constructor(docRoot, dirIndex)
-    {
-        this.mod = fs.constants.R_OK | fs.constants.X_OK;
-        this.docRoot = docRoot;
-        this.dirIndex = dirIndex;
-        // https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_split_path_info
-        this.pathRegExp = /^(.+\.php)(\/.*)?$/;
-    }
-
-    parseScriptAndPathInfo(resolvedPath)
-    {
-        const matches = this.pathRegExp.exec(resolvedPath);
-        return matches ? matches.slice(1, 3) : null;
-    }
-
-    resolveUri(requestPath)
-    {
-        // TODO detect actual directories and append "/" if API Gateway still strips them?
-        const requestUri = requestPath.endsWith("/") ? path.resolve(requestPath, this.dirIndex) : requestPath;
-
-        const [scriptName, pathInfo] = this.parseScriptAndPathInfo(requestUri) || [
-            path.resolve("/", this.dirIndex),
-            requestPath
-        ];
-        const scriptFileName = scriptName ? path.resolve(this.docRoot, scriptName.slice(1)) : undefined;
-        const pathInfoTranslated = pathInfo ? path.resolve(this.docRoot, pathInfo.slice(1)) : undefined;
-
-        if (scriptFileName && !scriptFileName.startsWith(this.docRoot))
-        {
-            throw new BadRequest(scriptFileName + ' => ' + scriptFileName);
-        }
-
-        if (pathInfoTranslated && !pathInfoTranslated.startsWith(this.docRoot))
-        {
-            throw new BadRequest(pathInfo + ' => ' + pathInfoTranslated);
-        }
-
-        return {
-            PATH_INFO: pathInfo, // CGI/1.1
-            PATH_TRANSLATED: pathInfoTranslated, // CGI/1.1
-            SCRIPT_NAME: scriptName, // CGI/1.1
-            SCRIPT_FILENAME: scriptFileName, // PHP
-            REQUEST_URI: requestPath // PHP
-        };
-    }
-}
-
-async function handler(event, context)
+function handler(event, context)
 {
     const {requestBody, charset, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
     const args = [
-        '-d', 'php.ini',
+        '-c', '/opt/etc/php.ini',
         '-d', 'memory_limit=' + context.memoryLimitInMB + 'M',
         '-d', 'max_execution_time=' + Math.trunc(context.getRemainingTimeInMillis() / 1000 - 5),
         '-d', 'default_mimetype=application/octet-stream',
@@ -167,10 +119,12 @@ async function handler(event, context)
         encoding: charset,
         input: requestBody,
         maxBuffer: 8 * 1024 ** 2, // 8M
-        // stdio: ['pipe', 'pipe', 'inherit']
     };
 
     const php = spawnSync('/opt/bin/php-cgi', args, opts); // TODO async
+
+    const stderr = php.stderr.toString();
+    console.error(stderr);
 
     if (php.status === 0)
     {
@@ -186,16 +140,16 @@ async function handler(event, context)
 
         const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
 
-        return {
+        context.succeed({
             statusCode: httpResponse.statusCode || 200,
             headers: httpResponse.headers,
             body: responseBody,
             isBase64Encoded: base64Encoded
-        };
+        });
     }
     else
     {
-        throw new Error(php.stderr.toString());
+        context.fail(stderr);
     }
 }
 

@@ -194,7 +194,7 @@ out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr FORCE
 				--template src/sam.yaml \
 				--docker-volume-basedir . \
 				--parameter-overrides "\
-				ParameterKey=documentRoot,ParameterValue=/var/task/$* \
+					ParameterKey=documentRoot,ParameterValue=/opt \
 					ParameterKey=dbHost,ParameterValue=$(db_host) \
 					ParameterKey=dbName,ParameterValue=$(db_name) \
 					ParameterKey=dbUser,ParameterValue=$(db_user) \
@@ -206,6 +206,10 @@ out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr FORCE
 	curl -vi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
 	cat $@/actual.1.response
 	diff src/test/int/expected.1.txt $@/actual.1.txt
+
+	curl -vi localhost:3000/wp/wp-admin/ -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
+	cat $@/actual.2.response
+	diff src/test/int/expected.2.txt $@/actual.2.txt
 
 
 acc: out/test/acc

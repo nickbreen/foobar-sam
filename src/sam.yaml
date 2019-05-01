@@ -5,7 +5,7 @@ Parameters:
   documentRoot:
     Type: String
     Default: /var/task
-  dirIndex:
+  directoryIndex:
     Type: String
     Default: index.php
   dbHost:
@@ -58,7 +58,7 @@ Resources:
       Environment:
         Variables:
           DOC_ROOT: !Ref documentRoot
-          DIR_INDEX: !Ref dirIndex
+          DIR_INDEX: !Ref directoryIndex
           WP_DATABASE_HOST: !Ref dbHost
           WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_NAME: !Ref dbName
