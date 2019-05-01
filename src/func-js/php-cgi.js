@@ -27,12 +27,14 @@ function base64EncodeBodyIfRequired(body, mimeType)
 
 function base64DecodeBodyIfRequired(event, mimeType)
 {
-    if (event.body)
+    if (!event.body)
     {
-        const charset = mimeType && mimeType.parameters.has("charset") ? mimeType.parameters.get("charset") : 'utf8';
-        const encoding = event.isBase64Encoded ? 'base64' : charset;
-        return Buffer.from(event.body, encoding);
+        return {};
     }
+    const charset = mimeType && mimeType.parameters.has("charset") ? mimeType.parameters.get("charset") : 'utf8';
+    const encoding = event.isBase64Encoded ? 'base64' : charset;
+    const requestBody = Buffer.from(event.body, encoding);
+    return {requestBody, charset};
 }
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
@@ -42,7 +44,7 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
     const [, requestContentType] = findHeader(event.headers, 'content-type');
     const requestMimeType = MIMEType.parse(requestContentType);
 
-    const requestBody = base64DecodeBodyIfRequired(event, requestMimeType);
+    const {requestBody, charset} = base64DecodeBodyIfRequired(event, requestMimeType);
     const contentLength = requestBody ? requestBody.length : null;
     const env = Object.assign(
         {},
@@ -76,7 +78,7 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
             return acc;
         }, {}));
 
-    return {requestBody, env};
+    return {requestBody, charset, env};
 }
 
 const roots = [process.env.LAMBDA_TASK_ROOT, "/opt/wp", "/opt/wp-content"];
@@ -106,7 +108,7 @@ function translatePath(event)
 
 async function handler(event, context)
 {
-    const {requestBody, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
+    const {requestBody, charset, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
     const args = [
         '-d', 'php.ini',
@@ -127,7 +129,7 @@ async function handler(event, context)
     const opts = {
         cwd: process.env.DOC_ROOT,
         env: env,
-        // encoding: 'utf8',
+        encoding: charset,
         input: requestBody,
         maxBuffer: 8 * 1024 ** 2, // 8M
         stdio: ['pipe', 'pipe', 'inherit']
