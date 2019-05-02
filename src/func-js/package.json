@@ -4,13 +4,15 @@
   "repository": "https://github.com/nickbreen/foobar-sam",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "node-phpcgi": "*",
+    "gateway": "*",
     "http-string-parser": "*",
+    "mime": "*",
     "whatwg-mimetype": "*"
   },
   "devDependencies": {
-    "mocha": "*",
-    "chai": "*"
+    "chai": "*",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "*"
   },
   "files": [
     "php-cgi.js"

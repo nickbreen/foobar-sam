@@ -2,7 +2,7 @@ const {expect} = require('chai');
 
 const {StaticAssetResolver} = require('./static-asset-resolver');
 
-describe('static-asset-resolver.js', function ()
+describe('static-asset-request-resolver.js', function ()
 {
     describe('StaticAssetResolver', function ()
     {

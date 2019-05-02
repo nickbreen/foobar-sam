@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const {Resolver} = require("./resolver");
+const {Resolver} = require("./request-resolver");
 
 class StaticAssetResolver extends Resolver
 {

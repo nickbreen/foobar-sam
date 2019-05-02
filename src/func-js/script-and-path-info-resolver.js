@@ -1,5 +1,5 @@
 const path = require('path');
-const {Resolver} = require("./resolver");
+const {Resolver} = require("./request-resolver");
 
 class BadRequest extends Error
 {

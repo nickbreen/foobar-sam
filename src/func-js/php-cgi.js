@@ -94,7 +94,8 @@ function extractBodyAndEnvironmentVariablesFromEvent(event)
     return {requestBody, charset, env};
 }
 
-function handler(event, context)
+
+function cgiHandler(event, context)
 {
     const {requestBody, charset, env} = extractBodyAndEnvironmentVariablesFromEvent(event);
 
@@ -128,32 +129,48 @@ function handler(event, context)
     const stderr = php.stderr.toString();
     console.error(stderr);
 
-    if (php.status === 0)
+    return new Promise((resolve, reject) => {
+
+        if (php.status === 0)
+        {
+            const cgiResponse = php.stdout.toString();
+
+            const httpResponse = parseResponse(cgiResponse);
+
+            const [, responseContentType] = findHeader(httpResponse.headers, 'content-type');
+
+            const responseMimeType = MIMEType.parse(responseContentType);
+
+            console.assert(responseMimeType);
+
+            const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
+
+            resolve({
+                statusCode: httpResponse.statusCode || 200,
+                headers: httpResponse.headers,
+                body: responseBody,
+                isBase64Encoded: base64Encoded
+            });
+        }
+        else
+        {
+            reject(stderr);
+        }
+    });
+
+}
+
+async function handler(event, context)
+{
+    try
     {
-        const cgiResponse = php.stdout.toString();
-
-        const httpResponse = parseResponse(cgiResponse);
-
-        const [, responseContentType] = findHeader(httpResponse.headers, 'content-type');
-
-        const responseMimeType = MIMEType.parse(responseContentType);
-
-        console.assert(responseMimeType);
-
-        const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
-
-        context.succeed({
-            statusCode: httpResponse.statusCode || 200,
-            headers: httpResponse.headers,
-            body: responseBody,
-            isBase64Encoded: base64Encoded
-        });
+        context.succeed(await cgiHandler(event, context));
     }
-    else
+    catch (e)
     {
-        context.fail(stderr);
+        context.fail(e);
     }
 }
 
 // noinspection JSUnusedGlobalSymbols
-module.exports = exports = {handler, ScriptAndPathInfoResolver, BadRequest};
+module.exports = exports = {handler};
