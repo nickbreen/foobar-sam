@@ -4,6 +4,7 @@ const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
 const {ScriptAndPathInfoResolver, BadRequest} = require('./script-and-path-info-resolver');
 const {StaticAssetResolver} = require('./static-asset-resolver');
+const path = require('path');
 
 function findHeader(headers, headerName)
 {
@@ -39,7 +40,7 @@ function base64DecodeBodyIfRequired(event, mimeType)
 
 function extractBodyAndEnvironmentVariablesFromEvent(event)
 {
-    const requestUri = event.path.endsWith("/") ? path.resolve(event.path, this.dirIndex) : event.path;
+    const requestUri = event.path.endsWith("/") ? path.resolve(event.path, process.env.DIR_INDEX) : event.path;
 
     const staticAssetResolver = new StaticAssetResolver(process.env.DIR_INDEX, process.env.DOC_ROOT);
 
@@ -111,7 +112,8 @@ function handler(event, context)
         '-d', 'cgi.force_redirect=0',
         '-d', 'session.save_handler', // unset
         '-d', 'opcache.enable=1',
-        '-d', 'enable_post_data_reading=0' // this will probably break WordPress
+        '-d', 'enable_post_data_reading=0', // this will probably break WordPress
+        '-d', 'auto_prepend_file='+process.env.LAMBDA_TASK_ROOT+'/buffer.php',
     ];
     const opts = {
         cwd: process.env.DOC_ROOT,

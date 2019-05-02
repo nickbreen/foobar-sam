@@ -19,9 +19,11 @@ img2lambda_version = 0.1.1
 php_version = 7.3.4
 composer_version = 1.8.5
 
-.PHONY: clean outdated update test int acc til
+.PHONY: deploy clean outdated update test int acc til
 
 sam_deps = src/sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
+
+FORCE:
 
 clean:
 	rm -rf out/*
@@ -71,10 +73,17 @@ out/layer-php/layer-%.zip: out/layer-php/image
 out/layer-php/layer-%.d: out/layer-php/layer-%.zip
 	rm -rf $@; mkdir -p $@
 	unzip -d $@ $<
-	cp -t $@/etc/ out/php.ini
 
 src/layer-php/php-src-php-$(php_version).tar.gz:
 	curl -fJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
+
+out/func-php/composer.phar: composer_version = 1.8.5
+out/func-php/composer.phar:
+	rm -rf ${@D}; mkdir -p ${@D}
+	curl -sSfJLR -z ${@} -o ${@} https://getcomposer.org/download/$(composer_version)/composer.phar
+	curl -sSfJLR -z ${@}.sha256sum -o ${@}.sha256sum https://getcomposer.org/download/$(composer_version)/composer.phar.sha256sum
+	cd ${@D}; sha256sum -c ${@F}.sha256sum
+	chmod +x ${@}
 
 # AWS img2lambda binary
 
@@ -136,7 +145,8 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/tes
 	test -n "$(db_user)"
 	test -n "$(db_pass)"
 
-	sam local invoke --skip-pull-image $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+			--skip-pull-image \
 			--event src/test/event.json \
 			--template src/sam.yaml \
 			--docker-volume-basedir . \
@@ -168,8 +178,7 @@ out/test/mysql.id:
 			-e MYSQL_USER=$(db_user) \
 			-e MYSQL_PASSWORD=$(db_pass) \
 			-e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
-			mysql:$(mysql_version) > $@
-	docker ps -f id=$(cont_id)
+			mysql:$(mysql_version) | tee $@
 	test -s $@
 
 out/test/mysql.addr: cont_id = $(file < out/test/mysql.id)
@@ -184,30 +193,37 @@ kill-mysql:
 	test -n "$(cont_id)" && docker stop $(cont_id)
 	@rm out/test/mysql.*
 
+sam: out/test/sam.pid
+out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
+out/test/sam.pid: out/test/mysql.addr
+	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+			--port 3000 \
+			--skip-pull-image \
+			--template src/sam.yaml \
+			--docker-volume-basedir . \
+			--parameter-overrides "\
+				ParameterKey=documentRoot,ParameterValue=/opt \
+				ParameterKey=dbHost,ParameterValue=$(db_host) \
+				ParameterKey=dbName,ParameterValue=$(db_name) \
+				ParameterKey=dbUser,ParameterValue=$(db_user) \
+				ParameterKey=dbPass,ParameterValue=$(db_pass) \
+			" & echo $$! > $@
+	sleep 5s
+
+kill-sam: pid = $(file < out/test/sam.pid)
+kill-sam:
+	kill -6 $(pid)
+	rm out/test/sam.pid
+
 int: out/test/int
-out/test/int: db_host = $(file < out/test/mysql.addr)
-out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr FORCE
+out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr out/test/sam.pid FORCE
 	rm -rf $@; mkdir -p $@
 
-	if ! curl -fs localhost:3000 > /dev/null; then\
-		sam local start-api --skip-pull-image $(patsubst %,--debug-port %,$(DEBUG_PORT)) --port 3000 \
-				--template src/sam.yaml \
-				--docker-volume-basedir . \
-				--parameter-overrides "\
-					ParameterKey=documentRoot,ParameterValue=/opt \
-					ParameterKey=dbHost,ParameterValue=$(db_host) \
-					ParameterKey=dbName,ParameterValue=$(db_name) \
-					ParameterKey=dbUser,ParameterValue=$(db_user) \
-					ParameterKey=dbPass,ParameterValue=$(db_pass) \
-				" & \
-		sleep 5s; \
-	fi
-
-	curl -vi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
+	curl -vsi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
 	cat $@/actual.1.response
 	diff src/test/int/expected.1.txt $@/actual.1.txt
 
-	curl -vi localhost:3000/wp/wp-admin/ -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
+	curl -vsi localhost:3000/wp/wp-admin/install.php -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
 	cat $@/actual.2.response
 	diff src/test/int/expected.2.txt $@/actual.2.txt
 
@@ -230,4 +246,3 @@ out/test/til: src/test/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
 	src/test/test.sh -D . -o $@ -t $(realpath src/sam.yaml) -u $(url)
 
-FORCE:
