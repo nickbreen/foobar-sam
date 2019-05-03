@@ -190,8 +190,8 @@ out/test/mysql.addr: out/test/mysql.id
 
 kill-mysql: cont_id = $(file < out/test/mysql.id)
 kill-mysql:
+	rm out/test/mysql.*
 	test -n "$(cont_id)" && docker stop $(cont_id)
-	@rm out/test/mysql.*
 
 sam: out/test/sam.pid
 out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
@@ -212,8 +212,8 @@ out/test/sam.pid: out/test/mysql.addr
 
 kill-sam: pid = $(file < out/test/sam.pid)
 kill-sam:
-	kill -6 $(pid)
 	rm out/test/sam.pid
+	kill -6 $(pid)
 
 int: out/test/int
 out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr out/test/sam.pid FORCE

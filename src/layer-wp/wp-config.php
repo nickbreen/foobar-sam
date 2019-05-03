@@ -50,6 +50,9 @@ define( 'WP_DEBUG', false );
 define( 'WP_CONTENT_DIR', __DIR__ . '/wp-content' );
 define( 'WP_CONTENT_URL', '/wp-content' );
 
+define( 'WP_SITEURL', 'http://' . $_SERVER['HTTP_HOST'] . '/wp');
+define( 'WP_HOME', 'http://' . $_SERVER['HTTP_HOST'] );
+
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */

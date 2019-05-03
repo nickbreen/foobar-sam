@@ -110,51 +110,51 @@ describe('RequestResolver', function ()
         const cases = [
             {
                 args: ['/'],
-                expected: new CgiRequest('/index.php', undefined, '/docroot/index.php', undefined, '/')
+                expect: new CgiRequest('/index.php', undefined, '/docroot/index.php', undefined, '/')
             },
             {
                 args: ['/index.php'],
-                expected: new CgiRequest('/index.php', undefined, '/docroot/index.php', undefined, '/index.php')
+                expect: new CgiRequest('/index.php', undefined, '/docroot/index.php', undefined, '/index.php')
             },
             {
                 args: ['/wp-admin/index.php'],
-                expected: new CgiRequest('/wp-admin/index.php', undefined, '/docroot/wp-admin/index.php', undefined, '/wp-admin/index.php')
+                expect: new CgiRequest('/wp-admin/index.php', undefined, '/docroot/wp-admin/index.php', undefined, '/wp-admin/index.php')
             },
             {
                 args: ['/wp-admin/test.php'],
-                expected: new CgiRequest('/wp-admin/test.php', undefined, '/docroot/wp-admin/test.php', undefined, '/wp-admin/test.php')
+                expect: new CgiRequest('/wp-admin/test.php', undefined, '/docroot/wp-admin/test.php', undefined, '/wp-admin/test.php')
             },
             {
                 args: ['/wp-admin/'],
-                expected: new CgiRequest('/wp-admin/index.php', undefined, '/docroot/wp-admin/index.php', undefined, '/wp-admin/')
+                expect: new CgiRequest('/wp-admin/index.php', undefined, '/docroot/wp-admin/index.php', undefined, '/wp-admin/')
             },
             {
                 args: ['/virtual-file'],
-                expected: new CgiRequest('/index.php', '/virtual-file', '/docroot/index.php', '/docroot/virtual-file', '/virtual-file')
+                expect: new CgiRequest('/index.php', '/virtual-file', '/docroot/index.php', '/docroot/virtual-file', '/virtual-file')
             },
             {
                 args: ['/virtual-dir/virtual-file'],
-                expected: new CgiRequest('/index.php', '/virtual-dir/virtual-file', '/docroot/index.php', '/docroot/virtual-dir/virtual-file', '/virtual-dir/virtual-file')
+                expect: new CgiRequest('/index.php', '/virtual-dir/virtual-file', '/docroot/index.php', '/docroot/virtual-dir/virtual-file', '/virtual-dir/virtual-file')
             },
             {
                 args: ['/wp-admin/index.php/virtual-dir/virtual-file'],
-                expected: new CgiRequest('/wp-admin/index.php', '/virtual-dir/virtual-file', '/docroot/wp-admin/index.php', '/docroot/virtual-dir/virtual-file', '/wp-admin/index.php/virtual-dir/virtual-file')
+                expect: new CgiRequest('/wp-admin/index.php', '/virtual-dir/virtual-file', '/docroot/wp-admin/index.php', '/docroot/virtual-dir/virtual-file', '/wp-admin/index.php/virtual-dir/virtual-file')
             },
             {
                 args: ['/wp-admin/test.php/virtual-dir/virtual-file'],
-                expected: new CgiRequest('/wp-admin/test.php', '/virtual-dir/virtual-file', '/docroot/wp-admin/test.php', '/docroot/virtual-dir/virtual-file', '/wp-admin/test.php/virtual-dir/virtual-file')
+                expect: new CgiRequest('/wp-admin/test.php', '/virtual-dir/virtual-file', '/docroot/wp-admin/test.php', '/docroot/virtual-dir/virtual-file', '/wp-admin/test.php/virtual-dir/virtual-file')
             },
             {
                 args: ['/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php'],
-                expected: new CgiRequest('/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php', undefined, '/docroot/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php', undefined, '/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php')
+                expect: new CgiRequest('/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php', undefined, '/docroot/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php', undefined, '/index.php/wp-content/uploads/2001/01/01/image.jpg/index.php')
             }
         ];
 
-        cases.forEach(({args, expected}) =>
+        cases.forEach(({args, expect}) =>
         {
-            it(JSON.stringify(args) + ' => ' + JSON.stringify(expected), () =>
+            it(JSON.stringify(args) + ' => ' + JSON.stringify(expect), () =>
             {
-                resolver.resolveRequest(...args).should.eventually.eql(expected);
+                resolver.resolveRequest({path:args[0]}).should.eventually.eql(expect);
             });
         });
     });
@@ -164,24 +164,24 @@ describe('RequestResolver', function ()
         const staticFiles = [
             {
                 args: ['/wp-content/uploads/2001/01/01/image.jpg'],
-                expected: new FileRequest('/docroot/wp-content/uploads/2001/01/01/image.jpg', "image/jpeg")
+                expect: new FileRequest('/docroot/wp-content/uploads/2001/01/01/image.jpg', "image/jpeg")
             },
             {
                 args: ['/wp-content/uploads/2001/01/01/document.pdf'],
-                expected: new FileRequest('/docroot/wp-content/uploads/2001/01/01/document.pdf', "application/pdf")
+                expect: new FileRequest('/docroot/wp-content/uploads/2001/01/01/document.pdf', "application/pdf")
             },
             {
                 args: ['/wp-content/uploads/2001/01/01/json.json'],
-                expected: new FileRequest('/docroot/wp-content/uploads/2001/01/01/json.json', "application/json")
+                expect: new FileRequest('/docroot/wp-content/uploads/2001/01/01/json.json', "application/json")
             },
         ];
 
-        staticFiles.forEach(({args, expected}) =>
+        staticFiles.forEach(({args, expect}) =>
         {
-            it(JSON.stringify(args) + ' => ' + JSON.stringify(expected), () =>
+            it(JSON.stringify(args) + ' => ' + JSON.stringify(expect), () =>
             {
                 // noinspection BadExpressionStatementJS
-                resolver.resolveRequest(...args).should.eventually.eql(expected);
+                resolver.resolveRequest(...args).should.eventually.eql(expect);
             });
         });
     });
@@ -200,5 +200,57 @@ describe('RequestResolver', function ()
             });
         });
 
+    });
+});
+
+
+describe("CgiRequest", () =>
+{
+    describe("#toCgiVars", () =>
+    {
+        const cases = [
+            {
+                args: {
+                    constructorArgs: [
+                        '/path/info',
+                        '/docroot/path/translated',
+                        '/dir/index.php/path/info',
+                        '/docroot/dir/index.php',
+                        '/dir/index.php'
+                    ],
+                    headers: {
+                        'Content-Type': 'text/plain; charset=UTF-8',
+                        'Header-With-One-Value': 'Header Value',
+                        'Header-With-Two-Values': ['header value 1', 'header value two']
+                    },
+                },
+                expect: {
+                    PATH_INFO: '/path/info',
+                    PATH_TRANSLATED: '/docroot/path/translated',
+                    REQUEST_URI: '/dir/index.php/path/info',
+                    SCRIPT_FILENAME: '/docroot/dir/index.php',
+                    SCRIPT_NAME: '/dir/index.php',
+                    CONTENT_TYPE: 'text/plain; charset=UTF-8',
+                    HTTP_HEADER_WITH_ONE_VALUE: 'Header Value',
+                    HTTP_HEADER_WITH_TWO_VALUES: 'header value 1, header value two'
+                },
+                expectNot: {
+                    HTTP_CONTENT_TYPE: undefined,
+                    HTTP_CONTENT_LENGTH: undefined,
+                    HTTP_AUTHORISATION: undefined
+                }
+            }
+        ];
+
+        cases.forEach(({args, expect, expectNot}) =>
+        {
+            it(JSON.stringify(args) + ' => ' + JSON.stringify(expect), () =>
+            {
+                new CgiRequest(...args.constructorArgs)
+                    .contentType(args.headers['Content-Type'])
+                    .headers(args.headers)
+                    .should.include(expect).and.not.keys(...Object.keys(expectNot));
+            });
+        });
     });
 });
