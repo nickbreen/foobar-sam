@@ -220,11 +220,11 @@ out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr out/t
 	rm -rf $@; mkdir -p $@
 
 	curl -vsi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
-	cat $@/actual.1.response
+	cat $@/actual.1.response; echo
 	diff src/test/int/expected.1.txt $@/actual.1.txt
 
 	curl -vsi localhost:3000/wp/wp-admin/install.php -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
-	cat $@/actual.2.response
+	cat $@/actual.2.response; echo
 	diff src/test/int/expected.2.txt $@/actual.2.txt
 
 

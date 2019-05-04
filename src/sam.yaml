@@ -59,6 +59,7 @@ Resources:
         Variables:
           DOC_ROOT: !Ref documentRoot
           DIR_INDEX: !Ref directoryIndex
+          WP_DEBUG: true
           WP_DATABASE_HOST: !Ref dbHost
           WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_NAME: !Ref dbName
