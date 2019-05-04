@@ -1,4 +1,4 @@
 200
-text/css; charset=utf-8
+text/css
 6134
 

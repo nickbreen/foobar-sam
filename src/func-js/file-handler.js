@@ -32,7 +32,7 @@ class FileHandler extends Handler
                         'ETag': digest,
                         'Content-MD5': digest
                     },
-                    body: responseBody,
+                    body: responseBody instanceof Buffer ? responseBody.toString() : responseBody,
                     isBase64Encoded: base64Encoded
                 });
             }
