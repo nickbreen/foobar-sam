@@ -39,10 +39,15 @@ out/sam.yaml: $(sam_deps)
 test: out/func-js | FORCE
 	cd $<; npm test
 
+pack: out/func-js/func-js-$(version).tgz
+out/func-js/func-js-$(version).tgz: out/func-js
+	rm -rf $@
+	cd $<; pwd; npm pack --dry-run --debug
+
 out/func-js: src/func-js/*
-	rm -rf $@; mkdir $@
+	rm -rf $@; mkdir -p $@
 	tar vc --exclude src/func-js/node_modules $^ | tar vx --directory $@ --strip-components 2
-	cd $@; npm install
+	cd $@; npm install; npm version $(version) --allow-same-version; npm shrinkwrap
 
 # Layer PHP application
 

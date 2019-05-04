@@ -1,5 +1,5 @@
 {
-  "name": "wp",
+  "name": "func-js",
   "description": "AWS SAM implementation for WordPress/PHP",
   "repository": "https://github.com/nickbreen/foobar-sam",
   "license": "GPL-3.0-or-later",
@@ -14,13 +14,11 @@
     "chai-as-promised": "^7.1.1",
     "mocha": "*"
   },
-  "files": [
-    "php-cgi.js"
-  ],
   "scripts": {
     "test": "NODE_ENV=test mocha '**/*.spec.js'"
   },
   "engines": {
     "node": "~8.10"
-  }
+  },
+  "version": "0.0.3"
 }
