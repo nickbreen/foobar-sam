@@ -221,12 +221,15 @@ out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr out/t
 
 	curl -vsi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
 	cat $@/actual.1.response; echo
-	diff src/test/int/expected.1.txt $@/actual.1.txt
+	diff src/test/int/expected.1.txt $@/actual.1.txt || diff src/test/int/expected.1nodata.txt $@/actual.1.txt
 
 	curl -vsi localhost:3000/wp/wp-admin/install.php -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
 	cat $@/actual.2.response; echo
 	diff src/test/int/expected.2.txt $@/actual.2.txt
 
+	curl -vsi 'localhost:3000/wp/wp-includes/css/buttons.min.css?ver=5.1.1' -w @src/test/int/expected.fmt -o $@/actual.3.response > $@/actual.3.txt
+	cat $@/actual.3.response; echo
+	diff src/test/int/expected.3.txt $@/actual.3.txt
 
 acc: out/test/acc
 out/test/acc: src/test/* $(sam_deps) FORCE

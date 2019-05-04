@@ -1,5 +1,6 @@
-const {RequestResolver} = require("./request-resolver");
+const {RequestResolver, CgiRequest, FileRequest} = require("./request-resolver");
 const {CgiHandler} = require('./cgi-handler');
+const {FileHandler} = require('./file-handler');
 
 async function handler(event, context)
 {
@@ -8,13 +9,15 @@ async function handler(event, context)
         const requestResolver = new RequestResolver(process.env.DOC_ROOT, process.env.DIR_INDEX);
         const request = await requestResolver.resolveRequest(event);
 
-        switch (request.constructor.name)
+        switch (request.constructor)
         {
-            case 'CgiRequest':
-                new CgiHandler(context).handle(request).then(context.succeed, context.fail);
+            case CgiRequest:
+                new CgiHandler(context.memoryLimitInMB, context.getRemainingTimeInMillis())
+                    .handle(request).then(context.succeed, context.fail);
                 break;
-            case 'FileRequest':
-                context.fail(request);
+            case FileRequest:
+                new FileHandler(context.memoryLimitInMB, context.getRemainingTimeInMillis())
+                    .handle(request).then(context.succeed, context.fail);
                 break;
             default:
                 context.fail("Unknown request type");

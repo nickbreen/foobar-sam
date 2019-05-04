@@ -1,6 +1,7 @@
 const {spawnSync} = require('child_process');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
+const {Handler, base64EncodeBodyIfRequired} = require('./handler');
 
 function findHeader(headers, headerName)
 {
@@ -8,28 +9,16 @@ function findHeader(headers, headerName)
         .find(([header]) => header.toLowerCase() === headerName.toLowerCase()) || [];
 }
 
-function base64EncodeBodyIfRequired(body, mimeType)
+class CgiHandler extends Handler
 {
-    if (!body)
+    constructor(memLimit, remainingTimeInMillis)
     {
-        return {base64Encoded: false, responseBody: body};
-    }
-    const base64Encoded = mimeType.type !== 'text';
-    const charset = mimeType.parameters.has("charset") ? mimeType.parameters.get("charset") : 'utf8';
-    const responseBody = base64Encoded ? Buffer.from(body, charset).toString('base64') : body;
-    return {base64Encoded, responseBody};
-}
-
-
-class CgiHandler
-{
-    constructor(context)
-    {
+        super(memLimit, remainingTimeInMillis);
         this.cmd = '/opt/bin/php-cgi';
         this.args = [
             '-c', '/opt/etc/php.ini',
-            '-d', 'memory_limit=' + (context.memoryLimitInMB / 2) + 'M',
-            '-d', 'max_execution_time=' + Math.trunc(context.getRemainingTimeInMillis() / 1000 - 5),
+            '-d', 'memory_limit=' + (this.memLimit / 2) + 'M',
+            '-d', 'max_execution_time=' + Math.trunc(this.maxTime / 1000 - 5),
             '-d', 'default_mimetype=application/octet-stream',
             '-d', 'default_charset=UTF-8',
             '-d', 'upload_max_filesize=2M',
@@ -42,6 +31,7 @@ class CgiHandler
             '-d', 'opcache.enable=1',
             '-d', 'enable_post_data_reading=0', // this will probably break WordPress
             '-d', 'auto_prepend_file=' + process.env.LAMBDA_TASK_ROOT + '/buffer.php',
+            '-d', 'display_errors=1',
         ];
         this.opts = {
             cwd: process.env.LAMBDA_TASK_ROOT,
@@ -66,7 +56,7 @@ class CgiHandler
                     input: request.body
                 });
 
-            const php = spawnSync(this.cmd, this.args, opts);
+            const php = spawnSync(this.cmd, this.args, opts); // TODO Promise this
 
             if (php.status === 0)
             {

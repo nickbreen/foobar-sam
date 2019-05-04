@@ -1,0 +1,4 @@
+302
+application/octet-stream
+7
+http://localhost:3000/wp/wp-admin/install.php
