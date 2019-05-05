@@ -21,7 +21,7 @@ composer_version = 1.8.5
 
 .PHONY: deploy clean outdated update test int acc til
 
-sam_deps = src/sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
+sam_deps = sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
 
 FORCE:
 
@@ -31,8 +31,9 @@ clean:
 deploy: out/sam.yaml
 	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
 
+package: out/sam.yaml
 out/sam.yaml: $(sam_deps)
-	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
+	sam package --template-file sam.yaml --output-template-file $@ --s3-bucket wp.foobar.nz
 
 # Function
 

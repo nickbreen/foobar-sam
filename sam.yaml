@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: PHP Lambda
+Description: WordPress PHP Lambda
 Transform: AWS::Serverless-2016-10-31
 Parameters:
   documentRoot:
@@ -12,7 +12,7 @@ Parameters:
     Type: String
     Default: localhost
   dbPort:
-    Type: Integer
+    Type: String
     Default: 3306
   dbName:
     Type: String

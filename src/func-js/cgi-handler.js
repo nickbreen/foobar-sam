@@ -1,7 +1,7 @@
 const {spawnSync} = require('child_process');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
-const {Handler, base64EncodeBodyIfRequired} = require('./handler');
+const {Handler} = require('./handler');
 
 function findHeader(headers, headerName)
 {
@@ -66,7 +66,7 @@ class CgiHandler extends Handler
 
                 const responseMimeType = MIMEType.parse(responseContentType);
 
-                const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
+                const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
 
                 resolve({
                     statusCode: httpResponse.statusCode || 200,

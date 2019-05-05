@@ -1,5 +1,5 @@
 const fs = require("fs");
-const {Handler, base64EncodeBodyIfRequired} = require("./handler");
+const {Handler} = require("./handler");
 const {createHash} = require('crypto');
 
 const dateToString = Date.prototype.toUTCString ? Date.prototype.toUTCString : Date.prototype.toGMTString;
@@ -23,7 +23,7 @@ class FileHandler extends Handler
                 hash.update(data);
                 const digest = hash.digest('hex');
 
-                const {base64Encoded, responseBody} = base64EncodeBodyIfRequired(data, request.mimeType);
+                const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(data, request.mimeType);
                 resolve({
                     statusCode: 200,
                     headers: {
