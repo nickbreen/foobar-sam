@@ -7,7 +7,8 @@
     "gateway": "*",
     "http-string-parser": "*",
     "mime": "*",
-    "whatwg-mimetype": "*"
+    "whatwg-mimetype": "*",
+    "aws-xray-sdk": "*"
   },
   "devDependencies": {
     "chai": "*",

@@ -30,18 +30,21 @@ Parameters:
   dbName:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/name"
+    Default: /no-set
   dbNameOverride:
     Type: String
     Default: ""
   dbUser:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/user"
+    Default: /no-set
   dbUserOverride:
     Type: String
     Default: ""
   dbPass:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/password"
+    Default: /no-set
     NoEcho: true
   dbPassOverride:
     Type: String
@@ -49,10 +52,10 @@ Parameters:
     NoEcho: true
 
 Conditions:
-    hasHostOverride: !Not [ !Equals [ !Ref dbHostOverride, "" ] ]
-    hasNameOverride: !Not [ !Equals [ !Ref dbNameOverride, "" ] ]
-    hasUserOverride: !Not [ !Equals [ !Ref dbUserOverride, "" ] ]
-    hasPassOverride: !Not [ !Equals [ !Ref dbPassOverride, "" ] ]
+    noHostOverride: !Equals [ !Ref dbHostOverride, "" ]
+    noNameOverride: !Equals [ !Ref dbNameOverride, "" ]
+    noUserOverride: !Equals [ !Ref dbUserOverride, "" ]
+    noPassOverride: !Equals [ !Ref dbPassOverride, "" ]
 
 Globals:                     
   Api:
@@ -89,14 +92,15 @@ Resources:
         - !Ref phpLayer
       Environment:
         Variables:
+          AWS_XRAY_DEBUG_MODE: TRUE
           DOC_ROOT: !Ref documentRoot
           DIR_INDEX: !Ref directoryIndex
           WP_DEBUG: !Ref wpDebug
-          WP_DATABASE_HOST: !If [ hasHostOverride, !Ref dbHostOverride, !Ref dbHost ]
           WP_DATABASE_PORT: !Ref dbPort
-          WP_DATABASE_NAME: !If [ hasNameOverride, !Ref dbNameOverride, !Ref dbName ]
-          WP_DATABASE_USER: !If [ hasUserOverride, !Ref dbUserOverride, !Ref dbUser ]
-          WP_DATABASE_PASS: !If [ hasPassOverride, !Ref dbPassOverride, !Ref dbPass ]
+          WP_DATABASE_HOST: !If [ noHostOverride, !Ref dbHost, !Ref dbHostOverride ]
+          WP_DATABASE_NAME: !If [ noNameOverride, !Ref dbName, !Ref dbNameOverride ]
+          WP_DATABASE_USER: !If [ noUserOverride, !Ref dbUser, !Ref dbUserOverride ]
+          WP_DATABASE_PASS: !If [ noPassOverride, !Ref dbPass, !Ref dbPassOverride ]
       Events:
         root:
           Type: Api

@@ -21,7 +21,7 @@ composer_version = 1.8.5
 
 .PHONY: deploy clean outdated update test int acc til
 
-sam_deps = $(shell find out/func-js out/layer-wp out/layer-php/layer-1.d)
+sam_deps = $(shell find out/func-js out/layer-wp out/layer-php/layer-1.d -name node_modules -prune -o -print)
 
 FORCE:
 
@@ -34,13 +34,13 @@ test: out/func-js | FORCE
 	cd $<; npm test
 
 pack: out/func-js/func-js-$(version).tgz
-out/func-js/func-js-$(version).tgz: out/func-js
+out/func-js/func-js-$(version).tgz: out/func-js/npm-shrinkwrap.json
 	rm -rf $@
-	cd $<; pwd; npm pack --dry-run --debug
+	cd ${<D}; pwd; npm pack --dry-run --debug
 
 out/func-js: src/func-js/*
 	rm -rf $@; mkdir -p $@
-	tar vc --exclude src/func-js/node_modules $^ | tar vx --directory $@ --strip-components 2
+	tar c --exclude src/func-js/node_modules $^ | tar x --directory $@ --strip-components 2
 	cd $@; npm install; npm version $(version) --allow-same-version; npm shrinkwrap
 
 # Layer PHP application
@@ -74,7 +74,7 @@ out/layer-php/layer-%.d: out/layer-php/layer-%.zip
 	unzip -d $@ $<
 
 src/layer-php/php-src-php-$(php_version).tar.gz:
-	curl -fJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
+	curl -sSfJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
 
 out/func-php/composer.phar: composer_version = 1.8.5
 out/func-php/composer.phar:
@@ -87,8 +87,8 @@ out/func-php/composer.phar:
 # AWS img2lambda binary
 
 src/img2lambda/linux-amd64-img2lambda:
-	curl -fJLR -z $@ -o $@ https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda
-	curl -fJLR -z $@.sha256 -o $@.sha256 https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda.sha256
+	curl -sSfJLR -z $@ -o $@ https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda
+	curl -sSfJLR -z $@.sha256 -o $@.sha256 https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda.sha256
 	cd ${@D}; sha256sum -c ${@F}.sha256
 	chmod +x $@
 
@@ -102,7 +102,7 @@ out/img2lambda: src/img2lambda/img2lambda.tar-$(img2lambda_version).gz
 
 src/img2lambda/img2lambda.tar-$(img2lambda_version).gz:
 	rm -rf $@; mkdir -p ${@D}
-	curl -fJLR -z ${@} -o ${@} https://github.com/awslabs/aws-lambda-container-image-converter/archive/$(img2lambda_version).tar.gz
+	curl -sSfJLR -z ${@} -o ${@} https://github.com/awslabs/aws-lambda-container-image-converter/archive/$(img2lambda_version).tar.gz
 
 # Dev Utilities
 

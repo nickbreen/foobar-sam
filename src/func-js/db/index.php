@@ -6,13 +6,15 @@ ob_start( function () {
 	return false;
 } );
 
-$mysqli = new mysqli(
-	getenv( 'WP_DATABASE_HOST' ),
-	getenv( 'WP_DATABASE_USER' ),
-	getenv( 'WP_DATABASE_PASS' ),
-	getenv( 'WP_DATABASE_NAME' ),
-	getenv( 'WP_DATABASE_PORT' )
-);
+$host = getenv( 'WP_DATABASE_HOST' );
+$user = getenv( 'WP_DATABASE_USER' );
+$pass = getenv( 'WP_DATABASE_PASS' );
+$name = getenv( 'WP_DATABASE_NAME' );
+$port = getenv( 'WP_DATABASE_PORT' );
+
+printf("db://%s:%s@%s:%s/%s\n", $user, $pass, $host, $port, $name);
+
+$mysqli = new mysqli( $host, $user, $pass, $name, $port );
 
 if ($mysqli->connect_errno)
 {
