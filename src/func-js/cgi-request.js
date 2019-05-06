@@ -13,11 +13,11 @@ const defaultCgiVars = {
     REMOTE_IDENT: undefined,
     REMOTE_USER: undefined,
     REQUEST_METHOD: undefined,
-    SCRIPT_NAME: undefined,
+    SCRIPT_NAME: undefined, // TODO
     SERVER_NAME: undefined,
     SERVER_PORT: undefined,
     SERVER_PROTOCOL: 'HTTP/1.1',
-    SERVER_SOFTWARE: undefined
+    SERVER_SOFTWARE: process.env.AWS_EXECUTION_ENV
 };
 
 // RFC 3875 4.1.18.  Protocol-Specific Meta-Variables

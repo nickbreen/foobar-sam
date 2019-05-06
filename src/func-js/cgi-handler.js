@@ -2,6 +2,7 @@ const {spawnSync} = require('child_process');
 const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
 const {Handler} = require('./handler');
+const AWSXRay = require("aws-xray-sdk");
 
 function findHeader(headers, headerName)
 {
@@ -54,31 +55,48 @@ class CgiHandler extends Handler
                 input: request.body
             });
 
+        AWSXRay.captureFunc('handle', (segment) =>
+        {
+            segment.addMetadata('opts', opts);
+        });
+
         return new Promise((resolve, reject) =>
         {
-            const php = spawnSync(this.cmd, this.args, opts);
 
-            if (php.status === 0)
+            AWSXRay.captureFunc('handle/promise', (segment) =>
             {
-                const httpResponse = parseResponse(php.stdout.toString());
+                const php = spawnSync(this.cmd, this.args, opts);
 
-                const [, responseContentType] = findHeader(httpResponse.headers, 'content-type');
+                segment.addAnnotation('php/status', php.status);
+                segment.addMetadata('php', php);
 
-                const responseMimeType = MIMEType.parse(responseContentType);
+                if (php.status === 0)
+                {
+                    const response = parseResponse(php.stdout.toString());
 
-                const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(httpResponse.body, responseMimeType);
+                    const [, contentType] = findHeader(response.headers, 'content-type');
+                    const mimeType = MIMEType.parse(contentType);
 
-                resolve({
-                    statusCode: httpResponse.statusCode || 200,
-                    headers: httpResponse.headers,
-                    body: responseBody,
-                    isBase64Encoded: base64Encoded
-                });
-            }
-            else
-            {
-                reject(php.status);
-            }
+                    const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(response.body, mimeType);
+
+                    segment.addMetadata('response', response);
+                    segment.addMetadata('mimeType', mimeType);
+                    segment.addMetadata('base64Encoded', base64Encoded);
+                    segment.addMetadata('body', responseBody);
+
+                    resolve({
+                        statusCode: response.statusCode || 200,
+                        headers: response.headers,
+                        body: responseBody,
+                        isBase64Encoded: base64Encoded
+                    });
+                }
+                else
+                {
+                    reject(php.status);
+                }
+            });
+
         });
     }
 }

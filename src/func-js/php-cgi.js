@@ -27,8 +27,6 @@ async function handler(event, context)
             segment.addMetadata('event', event);
         });
 
-        console.error('env: %o', process.env);
-
         const requestResolver = new RequestResolver(process.env.DOC_ROOT, process.env.DIR_INDEX);
         const request = await requestResolver.resolveRequest(event);
 
