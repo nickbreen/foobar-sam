@@ -255,7 +255,7 @@ out/%.url: out/%.yaml
     	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue' | tee out/$*.url
 
 acc: url = $(file < out/wp-sam-test.url)
-acc: out/test/acc out/wp-sam-test.url
+acc: out/wp-sam-test.url out/test/acc
 
 til: url = $(file < out/wp-sam.url)
-til: out/test/til out/wp-sam.url
+til: out/wp-sam.url out/test/til
