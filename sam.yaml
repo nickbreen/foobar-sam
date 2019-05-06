@@ -21,43 +21,21 @@ Parameters:
     Description: DB host
     Type: AWS::SSM::Parameter::Value<String>
     Default: /wp/db/host
-  dbHostOverride:
-    Type: String
-    Default: ""
   dbPort:
     Type: Number
     Default: 3306
   dbName:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/name"
-    Default: /no-set
-  dbNameOverride:
-    Type: String
-    Default: ""
   dbUser:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/user"
-    Default: /no-set
-  dbUserOverride:
-    Type: String
-    Default: ""
   dbPass:
     Type: AWS::SSM::Parameter::Value<String>
     Description: Usually "/${AWS::StackName}/db/password"
-    Default: /no-set
-    NoEcho: true
-  dbPassOverride:
-    Type: String
-    Default: ""
     NoEcho: true
 
-Conditions:
-    noHostOverride: !Equals [ !Ref dbHostOverride, "" ]
-    noNameOverride: !Equals [ !Ref dbNameOverride, "" ]
-    noUserOverride: !Equals [ !Ref dbUserOverride, "" ]
-    noPassOverride: !Equals [ !Ref dbPassOverride, "" ]
-
-Globals:                     
+Globals:
   Api:
     # https://www.iana.org/assignments/media-types/media-types.xhtml
     # https://github.com/awslabs/serverless-application-model/blob/master/examples/2016-10-31/implicit_api_settings/template.yaml
@@ -97,10 +75,10 @@ Resources:
           DIR_INDEX: !Ref directoryIndex
           WP_DEBUG: !Ref wpDebug
           WP_DATABASE_PORT: !Ref dbPort
-          WP_DATABASE_HOST: !If [ noHostOverride, !Ref dbHost, !Ref dbHostOverride ]
-          WP_DATABASE_NAME: !If [ noNameOverride, !Ref dbName, !Ref dbNameOverride ]
-          WP_DATABASE_USER: !If [ noUserOverride, !Ref dbUser, !Ref dbUserOverride ]
-          WP_DATABASE_PASS: !If [ noPassOverride, !Ref dbPass, !Ref dbPassOverride ]
+          WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_NAME: !Ref dbName
+          WP_DATABASE_USER: !Ref dbUser
+          WP_DATABASE_PASS: !Ref dbPass
       Events:
         root:
           Type: Api

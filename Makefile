@@ -151,11 +151,11 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/tes
 			--docker-volume-basedir . \
 			--parameter-overrides "\
 				ParameterKey=documentRoot,ParameterValue=$(doc_root) \
+				ParameterKey=dbHost,ParameterValue=$(db_host) \
+				ParameterKey=dbName,ParameterValue=$(db_name) \
+				ParameterKey=dbUser,ParameterValue=$(db_user) \
+				ParameterKey=dbPass,ParameterValue=$(db_pass) \
 				ParameterKey=wpDebug,ParameterValue=true \
-				ParameterKey=dbHostOverride,ParameterValue=$(db_host) \
-				ParameterKey=dbNameOverride,ParameterValue=$(db_name) \
-				ParameterKey=dbUserOverride,ParameterValue=$(db_user) \
-				ParameterKey=dbPassOverride,ParameterValue=$(db_pass) \
 			" function > $@/function.out
 
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
@@ -204,10 +204,10 @@ out/test/sam.pid: sam.yaml out/test/mysql.addr
 			--parameter-overrides "\
 				ParameterKey=documentRoot,ParameterValue=/opt \
 				ParameterKey=wpDebug,ParameterValue=true \
-				ParameterKey=dbHostOverride,ParameterValue=$(db_host) \
-				ParameterKey=dbNameOverride,ParameterValue=$(db_name) \
-				ParameterKey=dbUserOverride,ParameterValue=$(db_user) \
-				ParameterKey=dbPassOverride,ParameterValue=$(db_pass) \
+				ParameterKey=dbHost,ParameterValue=$(db_host) \
+				ParameterKey=dbName,ParameterValue=$(db_name) \
+				ParameterKey=dbUser,ParameterValue=$(db_user) \
+				ParameterKey=dbPass,ParameterValue=$(db_pass) \
 			" & echo $$! > $@
 	sleep 5s
 
