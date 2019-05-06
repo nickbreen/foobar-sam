@@ -21,19 +21,12 @@ composer_version = 1.8.5
 
 .PHONY: deploy clean outdated update test int acc til
 
-sam_deps = sam.yaml out/func-js out/layer-wp out/layer-php/layer-1.d
+sam_deps = $(shell find out/func-js out/layer-wp out/layer-php/layer-1.d)
 
 FORCE:
 
 clean:
 	rm -rf out/*
-
-deploy: out/sam.yaml
-	sam deploy --template-file $< --stack-name sam-wp --capabilities CAPABILITY_IAM
-
-package: out/sam.yaml
-out/sam.yaml: $(sam_deps)
-	sam package --template-file sam.yaml --output-template-file $@ --s3-bucket wp.foobar.nz
 
 # Function
 
@@ -154,14 +147,15 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/tes
 	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
 			--skip-pull-image \
 			--event src/test/event.json \
-			--template src/sam.yaml \
+			--template sam.yaml \
 			--docker-volume-basedir . \
 			--parameter-overrides "\
 				ParameterKey=documentRoot,ParameterValue=$(doc_root) \
-				ParameterKey=dbHost,ParameterValue=$(db_host) \
-				ParameterKey=dbName,ParameterValue=$(db_name) \
-				ParameterKey=dbUser,ParameterValue=$(db_user) \
-				ParameterKey=dbPass,ParameterValue=$(db_pass) \
+				ParameterKey=wpDebug,ParameterValue=true \
+				ParameterKey=dbHostOverride,ParameterValue=$(db_host) \
+				ParameterKey=dbNameOverride,ParameterValue=$(db_name) \
+				ParameterKey=dbUserOverride,ParameterValue=$(db_user) \
+				ParameterKey=dbPassOverride,ParameterValue=$(db_pass) \
 			" function > $@/function.out
 
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
@@ -201,18 +195,19 @@ kill-mysql:
 
 sam: out/test/sam.pid
 out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
-out/test/sam.pid: out/test/mysql.addr
+out/test/sam.pid: sam.yaml out/test/mysql.addr
 	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
 			--port 3000 \
 			--skip-pull-image \
-			--template src/sam.yaml \
+			--template $< \
 			--docker-volume-basedir . \
 			--parameter-overrides "\
 				ParameterKey=documentRoot,ParameterValue=/opt \
-				ParameterKey=dbHost,ParameterValue=$(db_host) \
-				ParameterKey=dbName,ParameterValue=$(db_name) \
-				ParameterKey=dbUser,ParameterValue=$(db_user) \
-				ParameterKey=dbPass,ParameterValue=$(db_pass) \
+				ParameterKey=wpDebug,ParameterValue=true \
+				ParameterKey=dbHostOverride,ParameterValue=$(db_host) \
+				ParameterKey=dbNameOverride,ParameterValue=$(db_name) \
+				ParameterKey=dbUserOverride,ParameterValue=$(db_user) \
+				ParameterKey=dbPassOverride,ParameterValue=$(db_pass) \
 			" & echo $$! > $@
 	sleep 5s
 
@@ -221,37 +216,46 @@ kill-sam:
 	rm out/test/sam.pid
 	kill -6 $(pid)
 
-int: out/test/int
-out/test/int:  src/test/int/expected.*.txt $(sam_deps) out/test/mysql.addr out/test/sam.pid FORCE
+int: url = http://localhost:3000/
+int: out/test/int out/test/sam.pid
+out/test/%: src/test/* src/test/int/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
 
-	curl -vsi localhost:3000/ -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
+	echo URL: $(url)
+	test -n "$(url)"
+
+	curl -Ssi $(url) -w @src/test/int/expected.fmt -o $@/actual.1.response > $@/actual.1.txt
 	cat $@/actual.1.response; echo
 	diff src/test/int/expected.1.txt $@/actual.1.txt || diff src/test/int/expected.1nodata.txt $@/actual.1.txt
 
-	curl -vsi localhost:3000/wp/wp-admin/install.php -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
+	curl -Ssi $(url)wp/wp-admin/install.php -w @src/test/int/expected.fmt -o $@/actual.2.response > $@/actual.2.txt
 	cat $@/actual.2.response; echo
 	diff src/test/int/expected.2.txt $@/actual.2.txt
 
-	curl -vsi 'localhost:3000/wp/wp-includes/css/buttons.min.css?ver=5.1.1' -w @src/test/int/expected.fmt -o $@/actual.3.response > $@/actual.3.txt
+	curl -Ssi '$(url)wp/wp-includes/css/buttons.min.css?ver=5.1.1' -w @src/test/int/expected.fmt -o $@/actual.3.response > $@/actual.3.txt
 	cat $@/actual.3.response; echo
 	diff src/test/int/expected.3.txt $@/actual.3.txt
 
-acc: out/test/acc
-out/test/acc: src/test/* $(sam_deps) FORCE
-	rm -rf $@; mkdir -p $@
-	src/test/test.sh -m \
-			$(patsubst %,-d %,$(DEBUG_PORT)) \
-			-s src/test \
-			-D . \
-			-o $@ \
-			-t $(realpath src/sam.yaml) \
-			-P ParameterKey=script,ParameterValue=wp.php
+# Deployment & Live Testing
 
-til: url = $(shell aws cloudformation describe-stacks --stack-name sam-wp | \
-	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue')
-til: out/test/til
-out/test/til: src/test/* $(sam_deps) FORCE
-	rm -rf $@; mkdir -p $@
-	src/test/test.sh -D . -o $@ -t $(realpath src/sam.yaml) -u $(url)
+package: out/wp-sam.yaml
+out/%.yaml: sam.yaml $(sam_deps)
+	rm -f $@
+	sam package --template-file $< --output-template-file $@ --s3-bucket wp.foobar.nz
 
+deploy: out/wp-sam.url
+out/%.url: out/%.yaml
+	rm -f $@
+	sam deploy --template-file $< --stack-name $* --capabilities CAPABILITY_IAM --parameter-overrides \
+				dbName=/$*/db/name \
+				dbUser=/$*/db/user \
+				dbPass=/$*/db/password
+
+	aws cloudformation describe-stacks --stack-name $* | \
+    	jq -r '.Stacks[].Outputs[] | select(.OutputKey == "Endpoint") | .OutputValue' | tee out/$*.url
+
+acc: url = $(file < out/wp-sam-test.url)
+acc: out/test/acc out/wp-sam-test.url
+
+til: url = $(file < out/wp-sam.url)
+til: out/test/til out/wp-sam.url

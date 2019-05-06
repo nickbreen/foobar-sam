@@ -45,18 +45,18 @@ class CgiHandler extends Handler
 
     handle(request)
     {
+        const opts = Object.assign(
+            {},
+            this.opts,
+            {
+                env: Object.assign({}, process.env, request.env),
+                encoding: request.encoding,
+                input: request.body
+            });
+
         return new Promise((resolve, reject) =>
         {
-            const opts = Object.assign(
-                {},
-                this.opts,
-                {
-                    env: Object.assign({}, process.env, request.env),
-                    encoding: request.encoding,
-                    input: request.body
-                });
-
-            const php = spawnSync(this.cmd, this.args, opts); // TODO Promise this
+            const php = spawnSync(this.cmd, this.args, opts);
 
             if (php.status === 0)
             {

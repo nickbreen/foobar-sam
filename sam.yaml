@@ -8,22 +8,53 @@ Parameters:
   directoryIndex:
     Type: String
     Default: index.php
+
+  wpDebug:
+    Type: String
+    Description: Enables WordPress debug mode
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
   dbHost:
+    Description: DB host
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /wp/db/host
+  dbHostOverride:
     Type: String
-    Default: localhost
+    Default: ""
   dbPort:
-    Type: String
+    Type: Number
     Default: 3306
   dbName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Usually "/${AWS::StackName}/db/name"
+  dbNameOverride:
     Type: String
-    Default: wordpress
+    Default: ""
   dbUser:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Usually "/${AWS::StackName}/db/user"
+  dbUserOverride:
     Type: String
-    Default: wordpress
+    Default: ""
   dbPass:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Usually "/${AWS::StackName}/db/password"
+    NoEcho: true
+  dbPassOverride:
     Type: String
-    Default: wordpress
-Globals:
+    Default: ""
+    NoEcho: true
+
+Conditions:
+    hasHostOverride: !Not [ !Equals [ !Ref dbHostOverride, "" ] ]
+    hasNameOverride: !Not [ !Equals [ !Ref dbNameOverride, "" ] ]
+    hasUserOverride: !Not [ !Equals [ !Ref dbUserOverride, "" ] ]
+    hasPassOverride: !Not [ !Equals [ !Ref dbPassOverride, "" ] ]
+
+Globals:                     
   Api:
     # https://www.iana.org/assignments/media-types/media-types.xhtml
     # https://github.com/awslabs/serverless-application-model/blob/master/examples/2016-10-31/implicit_api_settings/template.yaml
@@ -41,6 +72,7 @@ Globals:
       - LoggingLevel: INFO
         ResourcePath: /*
         HttpMethod: '*'
+
 Resources:
   function:
     Type: AWS::Serverless::Function
@@ -59,12 +91,12 @@ Resources:
         Variables:
           DOC_ROOT: !Ref documentRoot
           DIR_INDEX: !Ref directoryIndex
-          WP_DEBUG: true
-          WP_DATABASE_HOST: !Ref dbHost
+          WP_DEBUG: !Ref wpDebug
+          WP_DATABASE_HOST: !If [ hasHostOverride, !Ref dbHostOverride, !Ref dbHost ]
           WP_DATABASE_PORT: !Ref dbPort
-          WP_DATABASE_NAME: !Ref dbName
-          WP_DATABASE_USER: !Ref dbUser
-          WP_DATABASE_PASS: !Ref dbPass
+          WP_DATABASE_NAME: !If [ hasNameOverride, !Ref dbNameOverride, !Ref dbName ]
+          WP_DATABASE_USER: !If [ hasUserOverride, !Ref dbUserOverride, !Ref dbUser ]
+          WP_DATABASE_PASS: !If [ hasPassOverride, !Ref dbPassOverride, !Ref dbPass ]
       Events:
         root:
           Type: Api
