@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
-set -euo pipefail
+set -xeuo pipefail
 
 # AWS Lambda Environment Variables, per https://docs.aws.amazon.com/lambda/latest/dg/lambda-environment-variables.html
 declare _HANDLER # The handler location configured on the function.

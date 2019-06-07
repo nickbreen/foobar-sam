@@ -15,9 +15,6 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
-img2lambda_version = 0.2.0
-php_version = 7.3.4
-composer_version = 1.8.5
 
 .PHONY: deploy clean outdated update test int acc til test-mysql kill-mysql kill-sam
 
@@ -53,16 +50,18 @@ out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp
 
 # Layer PHP runtime
 
+php_version = 7.3.6
 out/layer-php/image: tag = layer-php:latest
-out/layer-php/image: src/img2lambda/linux-amd64-img2lambda src/layer-php/*
+out/layer-php/image: src/layer-php/php-src-php-$(php_version).tar.gz src/layer-php/bootstrap.sh src/layer-php/Dockerfile src/layer-php/handler.php
 	rm -rf $@; mkdir -p ${@D}
-	docker build --tag $(tag) --build-arg php_version=7.3.4 src/layer-php
+	docker build --tag $(tag) --build-arg php_version=$(php_version) src/layer-php
+	docker run --rm -i $(tag)
 	docker run --rm -i $(tag) handler.php 'Hello Lambda!'
 	docker save $(tag) --output $@
 
 # make -o out/layer-php/image out/layer-php/layer-1.zip -B
 out/layer-php/layer-%.zip: tag = layer-php:latest
-out/layer-php/layer-%.zip: out/layer-php/image
+out/layer-php/layer-%.zip: out/layer-php/image src/img2lambda/linux-amd64-img2lambda
 	rm -rf $@; mkdir -p ${@D}
 	docker load -i $<
 	src/img2lambda/linux-amd64-img2lambda --image $(tag) --dry-run --output-directory ${@D}
@@ -73,8 +72,8 @@ out/layer-php/layer-%.d: out/layer-php/layer-%.zip
 	rm -rf $@; mkdir -p $@
 	unzip -d $@ $<
 
-src/layer-php/php-src-php-$(php_version).tar.gz:
-	curl -sSfJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$(php_version).tar.gz
+src/layer-php/php-src-php-%.tar.gz:
+	curl -sSfJLR -z ./${@} -o ${@} https://github.com/php/php-src/archive/php-$*.tar.gz
 
 out/func-php/composer.phar: composer_version = 1.8.5
 out/func-php/composer.phar:
@@ -86,6 +85,7 @@ out/func-php/composer.phar:
 
 # AWS img2lambda binary
 
+src/img2lambda/linux-amd64-img2lambda: img2lambda_version = 0.2.0
 src/img2lambda/linux-amd64-img2lambda:
 	curl -sSfJLR -z $@ -o $@ https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda
 	curl -sSfJLR -z $@.sha256 -o $@.sha256 https://github.com/awslabs/aws-lambda-container-image-converter/releases/download/$(img2lambda_version)/linux-amd64-img2lambda.sha256
@@ -98,6 +98,7 @@ out/img2lambda: out/img2lambda/scripts/build_example.sh
 	rm -rf $@; mkdir -p ${@}
 	cd $@; ./scripts/build_example.sh
 
+out/img2lambda/scripts/build_example.sh: img2lambda_version = 0.2.0
 out/img2lambda/scripts/build_example.sh: src/img2lambda/img2lambda.tar-$(img2lambda_version).gz
 	rm -rf $@; mkdir -p ${@}
 	tar xf $< --directory $@ --strip-components 1

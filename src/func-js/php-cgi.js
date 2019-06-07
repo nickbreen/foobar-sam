@@ -36,12 +36,12 @@ async function handler(event, context)
 
         AWSXRay.captureFunc('handler', (segment) => segment.addMetadata('handler', handler));
 
-        handler.handle(request).then(context.succeed, context.fail);
+        return (await handler.handle(request)); //.then(context.succeed, context.fail);
     }
     catch (e)
     {
         AWSXRay.captureFunc('error', (segment) => segment.addMetadata('error', e));
-        context.fail(e);
+        // context.fail(e);
     }
 }
 
