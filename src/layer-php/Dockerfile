@@ -6,24 +6,23 @@
 ####### Install and compile everything #######
 
 # Same AL version as Lambda execution environment AMI
-FROM amazonlinux:2017.03.1.20170812 as builder
+FROM amazonlinux:2-with-sources as builder
 
 # Lock to 2017.03 release (same as Lambda) and install compilation dependencies
-RUN sed -i 's;^releasever.*;releasever=2017.03;;' /etc/yum.conf && \
-    yum clean all && \
-    yum install -y autoconf \
-                bison \
-                gcc \
-                gcc-c++ \
-                make \
-                libcurl-devel \
-                libxml2-devel \
-                openssl-devel \
-                tar \
-                gzip \
-                zip \
-                unzip \
-                git
+#RUN sed -i 's;^releasever.*;releasever=2017.03;;' /etc/yum.conf && \
+RUN yum clean all && yum install -y autoconf \
+        bison \
+        gcc \
+        gcc-c++ \
+        make \
+        libcurl-devel \
+        libxml2-devel \
+        openssl-devel \
+        tar \
+        gzip \
+        zip \
+        unzip \
+        git
 
 RUN yum install -y libpng-devel lib-jpeg-turbo-devel file diffutils
 

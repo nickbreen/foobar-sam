@@ -15,11 +15,11 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
-img2lambda_version = 0.1.1
+img2lambda_version = 0.2.0
 php_version = 7.3.4
 composer_version = 1.8.5
 
-.PHONY: deploy clean outdated update test int acc til
+.PHONY: deploy clean outdated update test int acc til test-mysql kill-mysql kill-sam
 
 sam_deps = $(shell find out/func-js out/layer-wp out/layer-php/layer-1.d -name node_modules -prune -o -print)
 
@@ -94,11 +94,13 @@ src/img2lambda/linux-amd64-img2lambda:
 
 # AWS img2lambda source & example
 
-out/img2lambda: src/img2lambda/img2lambda.tar-$(img2lambda_version).gz
+out/img2lambda: out/img2lambda/scripts/build_example.sh
+	rm -rf $@; mkdir -p ${@}
+	cd $@; ./scripts/build_example.sh
+
+out/img2lambda/scripts/build_example.sh: src/img2lambda/img2lambda.tar-$(img2lambda_version).gz
 	rm -rf $@; mkdir -p ${@}
 	tar xf $< --directory $@ --strip-components 1
-	find $@
-	cd $@; ./scripts/build_example.sh
 
 src/img2lambda/img2lambda.tar-$(img2lambda_version).gz:
 	rm -rf $@; mkdir -p ${@D}
@@ -188,10 +190,14 @@ out/test/mysql.addr: out/test/mysql.id
 	docker inspect -f '{{.NetworkSettings.IPAddress}}' $(cont_id) | tr -d '\n' | tee $@
 	test -s $@
 
+test-mysql: db_host = $(file < out/test/mysql.addr)
+test-mysql: out/test/mysql.addr
+	echo "show databases;" | docker run --rm mysql:$(mysql_version) mysql -h $(db_host) -uroot
+
 kill-mysql: cont_id = $(file < out/test/mysql.id)
 kill-mysql:
-	rm out/test/mysql.*
-	test -n "$(cont_id)" && docker stop $(cont_id)
+	rm -f out/test/mysql.*
+	+test -n "$(cont_id)" && docker stop $(cont_id)
 
 sam: out/test/sam.pid
 out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
@@ -213,11 +219,11 @@ out/test/sam.pid: sam.yaml out/test/mysql.addr
 
 kill-sam: pid = $(file < out/test/sam.pid)
 kill-sam:
-	rm out/test/sam.pid
-	kill -6 $(pid)
+	rm -f out/test/sam.pid
+	test -n "$(pid)" && kill -6 $(pid) || true
 
 int: url = http://localhost:3000/
-int: out/test/int out/test/sam.pid
+int: out/test/sam.pid out/test/int
 out/test/%: src/test/* src/test/int/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
 

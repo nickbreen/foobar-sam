@@ -59,7 +59,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
-      Runtime: nodejs8.10
+      Runtime: nodejs10.x
       CodeUri: out/func-js
       Handler: php-cgi.handler
       MemorySize: 256
