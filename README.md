@@ -95,7 +95,7 @@ Packages:
 
 [aws cli]: https://github.com/aws/aws-cli
 [aws sam cli]: https://github.com/awslabs/aws-sam-cli
-
+[aws lambda]: https://aws.amazon.com/blogs/compute/upcoming-updates-to-the-aws-lambda-execution-environment/
 
 [Required PHP extensions]: https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions
 [Laravel via CGI]: https://cwhite.me/hosting-a-laravel-application-on-aws-lambda/

@@ -1,61 +1,36 @@
-# Same AL version as Lambda execution environment AMI
-FROM amazonlinux:2.0.20190508-with-sources as builder
+# Same version as Lambda execution environment AMI
+# This must be nodejs10.x as it's the only environment that's *only* amazon linux 2
+FROM lambci/lambda:build-nodejs10.x as build
 
-# Lock to release ver same as Lambda and install compilation dependencies
-RUN sed -i 's;^releasever.*;releasever=2.0.20190508;;' /etc/yum.conf
-RUN yum install -y autoconf \
-        bison \
-        gcc \
-        gcc-c++ \
-        make \
-        libcurl-devel \
-        libxml2-devel \
-        openssl-devel \
-        tar \
-        gzip \
-        zip \
-        unzip\
-        libpng-devel \
-        libjpeg-turbo-devel \
-        file \
-        diffutils
+RUN yum install -y libcurl-devel libxml2-devel libpng-devel libjpeg-turbo-devel openssl-devel
 
 ARG php_version
 ARG php_src=php-src-php-${php_version}.tar.gz
 ARG php_src_dir=php-src-php-${php_version}
-ADD ${php_src} /opt/src
-WORKDIR /opt/src/${php_src_dir}
+ADD ${php_src} /usr/local/src
+WORKDIR /usr/local/src/${php_src_dir}
 RUN ./buildconf --force
-RUN ./configure --prefix=/opt/php --enable-option-checking=fatal \
+RUN ./configure --enable-option-checking=fatal \
         --with-openssl --with-curl --with-zlib --without-pear --disable-phar \
         --with-mhash --enable-mbstring --enable-mysqlnd \
         --with-mysqli --enable-exif --enable-filter --enable-fileinfo --enable-xml --with-gd --enable-xmlreader
-#RUN make -j test
 RUN make -j install
-RUN /opt/php/bin/php -v
-RUN /opt/php/bin/php-cgi -v
 
-# Prepare runtime files
-RUN mkdir -p /lambda-php-runtime/{bin,etc,lib} \
-    && cp /opt/php/bin/{php,php-cgi} /lambda-php-runtime/bin \
-    && cp /opt/src/${php_src_dir}/php.ini-production /lambda-php-runtime/etc/php.ini \
-    && cp /lib64/libpng15.so.15 /lambda-php-runtime/lib/
+RUN mkdir -p /opt/{bin,lib}
+RUN install -t /opt/bin /usr/local/bin/{php,php-cgi}
+RUN install -t /opt/lib /lib64/{libpng15.so.15,libcrypt.so.1,libxml2.so.2,libcurl.so.4}
+RUN install -t /opt/lib /lib64/{liblzma.so.5,libnghttp2.so.14,libidn2.so.0,libssh2.so.1,libldap-2.4.so.2,liblber-2.4.so.2}
+RUN install -t /opt/lib /lib64/{libunistring.so.0,libsasl2.so.3,libssl3.so,libsmime3.so,libnss3.so}
+COPY bootstrap.sh /opt/bootstrap
 
-ARG bootstrap=bootstrap.sh
-COPY ${bootstrap} /lambda-php-runtime/bootstrap
+FROM lambci/lambda:nodejs10.x AS test
 
-# Create runtime image
+COPY --from=build /opt /opt
 
-FROM amazonlinux:2.0.20190508 AS test
+RUN ldd /opt/bin/php && php -v
+RUN ldd /opt/bin/php-cgi && php-cgi -v
 
-COPY --from=builder /opt/php/bin/php-cgi /opt/bin/
-COPY --from=builder /opt/src/${php_src_dir}/php.ini-production /opt/etc/php.ini
-COPY --from=builder /lib64/libpng15.so.15 /opt/lib
-ENV LD_LIBRARY_PATH=/opt/lib:${LD_LIBRARY_PATH}
-RUN ldd /opt/bin/php && /opt/bin/php -v
-RUN ldd /opt/bin/php-cgi && /opt/bin/php-cgi -v
-
-FROM scratch AS runtime
+FROM lambci/lambda:nodejs10.x
 
 # Layer 1
-COPY --from=builder /lambda-php-runtime /opt/
+COPY --from=build /opt /opt
