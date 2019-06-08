@@ -17,7 +17,7 @@ class CgiHandler extends Handler
         super(memLimit, remainingTimeInMillis);
         this.cmd = '/opt/bin/php-cgi';
         this.args = [
-            '-c', '/opt/etc/php.ini',
+//            '-c', '/opt/etc/php.ini',
             '-d', 'memory_limit=' + (this.memLimit / 2) + 'M',
             '-d', 'max_execution_time=' + Math.trunc(this.maxTime / 1000 - 5),
             '-d', 'default_mimetype=application/octet-stream',
