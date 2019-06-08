@@ -15,10 +15,10 @@ version = $(shell git describe | awk -F- '{ \
 	if ($$2 && $$3) { print $$1 "+" $$2 "." $$3 } \
 	else { print $$1}}')
 
-
 .PHONY: deploy clean outdated update test int acc til test-mysql kill-mysql kill-sam
 
-sam_deps = $(shell find out/func-js out/layer-wp/wp out/layer-php/layer-1.d -name node_modules -prune -o -print)
+sam_deps = out/func-echo out/func-db out/func-js out/layer-wp out/layer-php/layer-1.d
+#			$(shell find out/func-js out/layer-wp out/layer-php/layer-1.d -name node_modules -prune -o -print)
 
 FORCE:
 
@@ -36,8 +36,10 @@ test: out/func-js | FORCE
 
 pack: out/func-js/func-js-$(version).tgz
 out/func-js/func-js-$(version).tgz: out/func-js/npm-shrinkwrap.json
-	rm -rf $@
-	cd ${<D}; pwd; npm pack --dry-run --debug
+	rm -rf $@; cd ${<D}; pwd; npm pack --dry-run --debug
+
+out/%: src/%/*
+	rm -rf $@; mkdir -p $@; cp -rt $@ $^
 
 out/func-js: src/func-js/*
 	rm -rf $@; mkdir -p $@
@@ -47,8 +49,7 @@ out/func-js: src/func-js/*
 # Layer PHP application
 
 out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php src/layer-wp/index.php
-	rm -rf $@; mkdir $@
-	cp -t $@ $^
+	rm -rf $@; mkdir $@; cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
@@ -56,10 +57,10 @@ out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp
 
 php_version = 7.3.6
 out/layer-php.image: tag = layer-php:latest
-out/layer-php.image: src/layer-php/php-src-php-$(php_version).tar.gz src/layer-php/bootstrap.sh src/layer-php/Dockerfile
+out/layer-php.image: src/layer-php/php-src-php-$(php_version).tar.gz src/layer-php/*
 	rm -rf $@; mkdir -p ${@D}
 	docker build --tag $(tag) --build-arg php_version=$(php_version) src/layer-php
-#	docker run --rm -i -v $$PWD:/var/task $(tag) handler.php '{"hello": "Hello Lambda!"}'
+	docker run --rm -i -v $$PWD/src/layer-php:/var/task $(tag) handler.php Hello
 	docker save $(tag) --output $@
 
 # make -o out/layer-php.image out/layer-php/layer-1.zip -B
@@ -68,7 +69,7 @@ out/layer-php/layer-%.zip: out/layer-php.image src/img2lambda/linux-amd64-img2la
 	rm -rf $@; mkdir -p ${@D}
 	docker load -i $<
 	src/img2lambda/linux-amd64-img2lambda --image $(tag) --dry-run --output-directory ${@D}
-	unzip -vt $@ bin/php bin/php-cgi etc/php.ini bootstrap
+	unzip -vt $@ bootstrap bin/php bin/php-cgi
 
 # make -o out/layer-php/layer-1.zip out/layer-php/layer-1.d -B
 out/layer-php/layer-%.d: out/layer-php/layer-%.zip
@@ -129,20 +130,27 @@ src/test/event.json:
 #test: out/test/test-echo out/test/test-db out/test/test-wp
 
 debug-%: DEBUG_PORT = 5858
-debug-echo: test-echo
-debug-db: test-db
-debug-wp: test-wp
+debug-echo: out/test/test-echo
+debug-db: out/test/test-db
+debug-wp: out/test/test-wp
 debug-int: int
 
-test-echo: doc_root = /var/task/echo
+test-%: out/test/test-%
 test-echo: out/test/test-echo
-test-db: doc_root = /var/task/db
+test-echo: doc_root = /var/task/echo
 test-db: out/test/test-db
-test-wp: doc_root = /opt/
+test-db: doc_root = /var/task/db
 test-wp: out/test/test-wp
+test-wp: doc_root = /opt/
 
+out/test/test-echo: db_host = 127.0.0.1
+out/test/test-echo: func = echoProvided
+out/test/test-db: func = dbProvided
+out/test/test-db: out/test/mysql.addr
+out/test/test-wp: out/test/mysql.addr
+out/test/test-%: func = function
 out/test/test-%: db_host = $(file < out/test/mysql.addr)
-out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/test/mysql.addr FORCE
+out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 
 	test -n "$(db_host)"
@@ -162,12 +170,12 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json out/tes
 				ParameterKey=dbUser,ParameterValue=$(db_user) \
 				ParameterKey=dbPass,ParameterValue=$(db_pass) \
 				ParameterKey=wpDebug,ParameterValue=true \
-			" function > $@/function.out
+			" $(func) > $@/function.out
 
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
 
-	diff -B src/test/$*/expected.out $@/actual.out || grep Error $@/actual.out > /dev/null
+	diff -Bu src/test/$*/expected.out $@/actual.out || grep Error $@/actual.out > /dev/null
 
 db_name = wordpress
 db_user = wordpress

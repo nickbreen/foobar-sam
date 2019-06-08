@@ -59,7 +59,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
-      Runtime: provided
+      Runtime: nodejs8.10
       CodeUri: out/func-js
       Handler: php-cgi.handler
       MemorySize: 256
@@ -80,6 +80,69 @@ Resources:
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
           WP_DATABASE_PASS: !Ref dbPass
+      Events:
+        root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+        proxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+  dbProvided:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-db-provided
+      Runtime: provided
+      CodeUri: out/func-db
+      Handler: index.php
+      MemorySize: 256
+      Timeout: 90
+      Tracing: Active
+      Layers:
+        - arn:aws:lambda:::awslayer:AmazonLinux1803
+        - !Ref wpLayer
+        - !Ref phpLayer
+      Environment:
+        Variables:
+          AWS_XRAY_DEBUG_MODE: TRUE
+          WP_DATABASE_PORT: !Ref dbPort
+          WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_NAME: !Ref dbName
+          WP_DATABASE_USER: !Ref dbUser
+          WP_DATABASE_PASS: !Ref dbPass
+      Events:
+        root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+        proxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+  echoProvided:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-echo-provided
+      Runtime: provided
+      CodeUri: out/func-echo
+      Handler: index.php
+      MemorySize: 256
+      Timeout: 90
+      Tracing: Active
+      Layers:
+        - arn:aws:lambda:::awslayer:AmazonLinux1803
+        - !Ref wpLayer
+        - !Ref phpLayer
+      Environment:
+        Variables:
+          AWS_XRAY_DEBUG_MODE: TRUE
       Events:
         root:
           Type: Api
