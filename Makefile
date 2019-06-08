@@ -27,6 +27,7 @@ clean:
 
 docker-clean:
 	docker ps -qf status=exited  | xargs -r docker rm -fv
+	docker image ls -f dangling=true -q | xargs -r docker image rm
 
 # Function
 

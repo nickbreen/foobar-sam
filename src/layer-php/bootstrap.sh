@@ -27,15 +27,13 @@ declare AWS_LAMBDA_RUNTIME_API # (custom runtime) The host and port of the runti
 
 while true
 do
-	HEADERS="$(mktemp)"
-	REQUEST="$(mktemp)"
-	RESPONSE="$(mktemp)"
-	curl -fsS -LD "${HEADERS}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next" -o "${REQUEST}"
+	declare headers="$(mktemp)" request="$(mktemp)" response="$(mktemp)"
+	curl -fsSL -D "${headers}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next" -o "${request}"
 
-	REQUEST_ID=$(sed -n -E '/Lambda-Runtime-Aws-Request-Id/I s/^.*:\s*([-[:xdigit:]]+).*$/\1/ p' "${HEADERS}")
-	test "${REQUEST_ID}"
+	request_id=$(sed -n -E '/Lambda-Runtime-Aws-Request-Id/I s/^.*:\s*([-[:xdigit:]]+).*$/\1/ p' "${headers}")
+	test -n "${request_id}"
 
-	php -f "${_HANDLER}" < "${REQUEST}" > "${RESPONSE}"
+	php -f "${_HANDLER}" < "${request}" > "${response}"
 
-	curl -fsS "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${REQUEST_ID}/response" -d "@${RESPONSE}"
+	curl -fsS "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${request_id}/response" -d "@${response}"
 done

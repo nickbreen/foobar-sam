@@ -59,13 +59,14 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
-      Runtime: nodejs10.x
+      Runtime: provided
       CodeUri: out/func-js
       Handler: php-cgi.handler
       MemorySize: 256
       Timeout: 90
       Tracing: Active
       Layers:
+        - arn:aws:lambda:::awslayer:AmazonLinux1803
         - !Ref wpLayer
         - !Ref phpLayer
       Environment:
