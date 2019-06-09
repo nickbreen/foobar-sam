@@ -2,7 +2,7 @@
   "body": "eyJ0ZXN0IjoiYm9keSJ9",
   "resource": "/{proxy+}",
   "path": "/path/to/resource",
-  "httpMethod": "POST",
+  "httpMethod": "GET",
   "isBase64Encoded": true,
   "queryStringParameters": {
     "foo": "bar"
@@ -55,7 +55,7 @@
     },
     "path": "/prod/path/to/resource",
     "resourcePath": "/{proxy+}",
-    "httpMethod": "POST",
+    "httpMethod": "GET",
     "apiId": "1234567890",
     "protocol": "HTTP/1.1"
   }

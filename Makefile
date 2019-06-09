@@ -143,13 +143,17 @@ test-db: doc_root = /var/task/db
 test-wp: out/test/test-wp
 test-wp: doc_root = /opt/
 
-out/test/test-echo: db_host = 127.0.0.1
 out/test/test-echo: func = echoProvided
+out/test/test-echo: db_host = 127.0.0.1
+
 out/test/test-db: func = dbProvided
+out/test/test-db: db_host = $(file < out/test/mysql.addr)
 out/test/test-db: out/test/mysql.addr
+
+out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 out/test/test-wp: out/test/mysql.addr
+
 out/test/test-%: func = function
-out/test/test-%: db_host = $(file < out/test/mysql.addr)
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 
@@ -158,7 +162,7 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	test -n "$(db_user)"
 	test -n "$(db_pass)"
 
-	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug \
 			--skip-pull-image \
 			--event src/test/event.json \
 			--template sam.yaml \
@@ -214,7 +218,7 @@ kill-mysql:
 sam: out/test/sam.pid
 out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
 out/test/sam.pid: sam.yaml out/test/mysql.addr
-	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) \
+	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug \
 			--port 3000 \
 			--skip-pull-image \
 			--template $< \
@@ -231,8 +235,7 @@ out/test/sam.pid: sam.yaml out/test/mysql.addr
 
 kill-sam: pid = $(file < out/test/sam.pid)
 kill-sam:
-	rm -f out/test/sam.pid
-	test -n "$(pid)" && kill -6 $(pid) || true
+	test -n "$(pid)" && kill -6 $(pid) && rm -f out/test/sam.pid
 
 int: url = http://localhost:3000/
 int: out/test/sam.pid out/test/int

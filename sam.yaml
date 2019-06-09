@@ -114,16 +114,12 @@ Resources:
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
           WP_DATABASE_PASS: !Ref dbPass
+          auto_prepend_file: response.php
       Events:
-        root:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
         proxy:
           Type: Api
           Properties:
-            Path: /{proxy+}
+            Path: /db/{proxy+}
             Method: ANY
 
   echoProvided:
@@ -143,16 +139,12 @@ Resources:
       Environment:
         Variables:
           AWS_XRAY_DEBUG_MODE: TRUE
+          auto_prepend_file: response.php
       Events:
-        root:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
         proxy:
           Type: Api
           Properties:
-            Path: /{proxy+}
+            Path: /echo/{proxy+}
             Method: ANY
 
   phpLayer:

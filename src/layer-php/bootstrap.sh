@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -xeuo pipefail
 shopt -s extglob
 
 # AWS Lambda Environment Variables, per https://docs.aws.amazon.com/lambda/latest/dg/lambda-environment-variables.html
@@ -53,6 +53,15 @@ declare lambda_runtime_trace_id # The AWS X-Ray tracing header.
 declare lambda_runtime_client_context # For invocations from the AWS Mobile SDK, data about the client application and device.
 declare lambda_runtime_cognito_identity # For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
 
+# Extra PHP Stuff
+declare auto_prepend_file
+
+test -f ${_HANDLER} && php -l ${_HANDLER}
+if test -n ${auto_prepend_file-}
+then
+	test -f ${auto_prepend_file-} && php -l ${auto_prepend_file-}
+fi
+
 while true
 do
 	declare headers="$(mktemp)" request="$(mktemp)" response="$(mktemp)"
@@ -72,9 +81,9 @@ do
 		esac
 	done < ${headers}
 
-	test -f "${_HANDLER}"
+	php ${auto_prepend_file+-d auto_prepend_file=${auto_prepend_file}} -f "${_HANDLER}" < "${request}" > "${response}"
 
-	php "${_HANDLER}" < "${request}" > "${response}"
+	cat ${response}; echo
 
 	curl -fsS -d "@${response}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${lambda_runtime_aws_request_id}/response"
 	rm ${headers} ${request} ${response}
