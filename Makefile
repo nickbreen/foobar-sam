@@ -28,6 +28,7 @@ clean:
 docker-clean:
 	docker ps -qf status=exited  | xargs -r docker rm -fv
 	docker image ls -f dangling=true -q | xargs -r docker image rm
+	test -f out/layer-php.image && docker load -i out/layer-php.image || true
 
 # Function
 
@@ -58,7 +59,6 @@ out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp
 php_version = 7.3.6
 out/layer-php.image: tag = layer-php:latest
 out/layer-php.image: src/layer-php/php-src-php-$(php_version).tar.gz src/layer-php/*
-	test -f $@ && docker load -i $@ || true # load the previous build in case we've cleaned docker, saves time
 	docker build --tag $(tag) --build-arg php_version=$(php_version) src/layer-php
 	docker run --rm -i -v $$PWD/src/layer-php/index.php:/var/task/index.php:ro $(tag) handler.php
 	docker save $(tag) --output $@
