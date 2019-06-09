@@ -16,8 +16,9 @@ RUN make -j install
 RUN mkdir -p /opt/{bin,lib}
 RUN install -t /opt/bin /usr/local/bin/{php,php-cgi}
 COPY bootstrap.sh /opt/bootstrap
+COPY handler.php /opt/php/
 
-RUN /opt/bin/php -v
+RUN /opt/bin/php -v && php -d include_path=.:/opt/php -r 'require("handler.php");'
 
 FROM lambci/lambda:provided
 

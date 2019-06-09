@@ -38,8 +38,8 @@ declare REMOTE_ADDR
 declare REMOTE_HOST
 declare REMOTE_IDENT
 declare REMOTE_USER
-declare REQUEST_METHOD
-declare SCRIPT_NAME
+declare REQUEST_METHOD=${REQUEST_METHOD-GET}
+declare SCRIPT_NAME=${SCRIPT_NAME-${LAMBDA_TASK_ROOT}/index.php}
 declare SERVER_NAME
 declare SERVER_PORT
 declare SERVER_PROTOCOL='HTTP/1.1'
@@ -53,23 +53,16 @@ declare lambda_runtime_trace_id # The AWS X-Ray tracing header.
 declare lambda_runtime_client_context # For invocations from the AWS Mobile SDK, data about the client application and device.
 declare lambda_runtime_cognito_identity # For invocations from the AWS Mobile SDK, data about the Amazon Cognito identity provider.
 
-# Extra PHP Stuff
-declare auto_prepend_file
-
 test -f ${_HANDLER} && php -l ${_HANDLER}
-if test -n ${auto_prepend_file-}
-then
-	test -f ${auto_prepend_file-} && php -l ${auto_prepend_file-}
-fi
 
 while true
 do
-	declare headers="$(mktemp)" request="$(mktemp)" response="$(mktemp)"
-	curl -fsSL -D "${headers}" -o "${request}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next"
+	declare headers=$(mktemp) request=$(mktemp) response=$(mktemp)
+	curl -fsSL -D ${headers} -o ${request} http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next
 
 	while IFS=: read header value
 	do
-		value=${value##+([[:space:]])}; value=${value%%+([[:space:]])}
+		value="${value##+([[:space:]])}"; value="${value%%+([[:space:]])}"
 
 		case ${header} in
 		Lambda-Runtime-Aws-Request-Id) lambda_runtime_aws_request_id="${value}";;
@@ -81,10 +74,19 @@ do
 		esac
 	done < ${headers}
 
-	php ${auto_prepend_file+-d auto_prepend_file=${auto_prepend_file}} -f "${_HANDLER}" < "${request}" > "${response}"
+ 	< ${request} > ${response} php-cgi -d auto_prepend_file=${_HANDLER} \
+            -d include_path=.:/opt/php \
+            -d default_mimetype= \
+            -d cgi.discard_path=1 \
+            -d error_log=/dev/stderr \
+            -d cgi.rfc2616_headers=1 \
+            -d cgi.force_redirect=0 \
+            -d session.save_handler= \
+            -d opcache.enable=1 \
+            -d enable_post_data_reading=0
 
-	cat ${response}; echo
+	echo Response:; cat ${response}; echo
 
-	curl -fsS -d "@${response}" "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${lambda_runtime_aws_request_id}/response"
+	curl -fsS -d @${response} http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${lambda_runtime_aws_request_id}/response
 	rm ${headers} ${request} ${response}
 done

@@ -114,7 +114,6 @@ Resources:
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
           WP_DATABASE_PASS: !Ref dbPass
-          auto_prepend_file: response.php
       Events:
         proxy:
           Type: Api
@@ -128,7 +127,7 @@ Resources:
       FunctionName: !Sub ${AWS::StackName}-echo-provided
       Runtime: provided
       CodeUri: out/func-echo
-      Handler: index.php
+      Handler: handler.php
       MemorySize: 256
       Timeout: 90
       Tracing: Active
@@ -139,7 +138,6 @@ Resources:
       Environment:
         Variables:
           AWS_XRAY_DEBUG_MODE: TRUE
-          auto_prepend_file: response.php
       Events:
         proxy:
           Type: Api

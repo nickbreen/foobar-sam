@@ -58,9 +58,9 @@ out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp
 php_version = 7.3.6
 out/layer-php.image: tag = layer-php:latest
 out/layer-php.image: src/layer-php/php-src-php-$(php_version).tar.gz src/layer-php/*
-	rm -rf $@; mkdir -p ${@D}
+	test -f $@ && docker load -i $@ || true # load the previous build in case we've cleaned docker, saves time
 	docker build --tag $(tag) --build-arg php_version=$(php_version) src/layer-php
-	docker run --rm -i -v $$PWD/src/layer-php:/var/task $(tag) handler.php Hello
+	docker run --rm -i -v $$PWD/src/layer-php/index.php:/var/task/index.php:ro $(tag) handler.php
 	docker save $(tag) --output $@
 
 # make -o out/layer-php.image out/layer-php/layer-1.zip -B

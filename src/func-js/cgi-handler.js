@@ -20,7 +20,7 @@ class CgiHandler extends Handler
 //            '-c', '/opt/etc/php.ini',
             '-d', 'memory_limit=' + (this.memLimit / 2) + 'M',
             '-d', 'max_execution_time=' + Math.trunc(this.maxTime / 1000 - 5),
-            '-d', 'default_mimetype=application/octet-stream',
+            '-d', 'default_mimetype=',
             '-d', 'default_charset=UTF-8',
             '-d', 'upload_max_filesize=2M',
             '-d', 'post_max_size=8M',
@@ -28,10 +28,11 @@ class CgiHandler extends Handler
             '-d', 'error_log=/dev/stderr',
             '-d', 'cgi.rfc2616_headers=1',
             '-d', 'cgi.force_redirect=0',
-            '-d', 'session.save_handler', // unset
+            '-d', 'session.save_handler=',
             '-d', 'opcache.enable=1',
             '-d', 'enable_post_data_reading=0', // this will probably break WordPress
-            '-d', 'auto_prepend_file=' + process.env.LAMBDA_TASK_ROOT + '/buffer.php',
+            '-d', 'include_path=.:/opt/php',
+            '-d', 'auto_prepend_file=handler.php',
             '-d', 'display_errors=1',
         ];
         this.opts = {
