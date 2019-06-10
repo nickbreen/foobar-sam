@@ -146,6 +146,9 @@ test-wp: doc_root = /opt/
 out/test/test-echo: func = echoProvided
 out/test/test-echo: db_host = 127.0.0.1
 
+out/test/test-echo-node: func = echoNode
+out/test/test-echo-node: db_host = 127.0.0.1
+
 out/test/test-hello-node: func = helloNode
 out/test/test-hello-node: db_host = 127.0.0.1
 

@@ -123,7 +123,7 @@ Resources:
   helloNode:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-echo-node
+      FunctionName: !Sub ${AWS::StackName}-hello-node
       Runtime: nodejs8.10
       CodeUri: out/func-js
       Handler: php-cgi.handler
@@ -138,6 +138,31 @@ Resources:
         Variables:
           DOC_ROOT: /var/task
           DIR_INDEX: hello.php
+      Events:
+        proxy:
+          Type: Api
+          Properties:
+            Path: /hello-node/{proxy+}
+            Method: ANY
+
+  echoNode:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-echo-node
+      Runtime: nodejs8.10
+      CodeUri: out/func-js
+      Handler: php-cgi.handler
+      MemorySize: 256
+      Timeout: 90
+      Tracing: Active
+      Layers:
+        - arn:aws:lambda:::awslayer:AmazonLinux1803
+        - !Ref wpLayer
+        - !Ref phpLayer
+      Environment:
+        Variables:
+          DOC_ROOT: /var/task
+          DIR_INDEX: echo.php
       Events:
         proxy:
           Type: Api
