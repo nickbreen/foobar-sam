@@ -32,7 +32,8 @@ class CgiHandler extends Handler
             '-d', 'opcache.enable=1',
             '-d', 'enable_post_data_reading=0', // this will probably break WordPress
             '-d', 'include_path=.:/opt/php',
-            '-d', 'display_errors=1',
+            '-d', 'display_errors=0',
+            '-d', 'log_errors=1',
         ];
         this.opts = {
             cwd: process.env.LAMBDA_TASK_ROOT,

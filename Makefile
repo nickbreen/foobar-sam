@@ -127,7 +127,7 @@ update: src/layer-wp
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
-#test: out/test/test-echo out/test/test-db out/test/test-wp
+test: out/test/test-echo out/test/test-hello-node out/test/test-echo-node out/test/test-db-node out/test/test-wp
 
 debug-%: DEBUG_PORT = 5858
 debug-echo: out/test/test-echo
@@ -135,31 +135,22 @@ debug-db: out/test/test-db
 debug-wp: out/test/test-wp
 debug-int: int
 
-test-%: out/test/test-%
-test-echo: out/test/test-echo
-test-echo: doc_root = /var/task/echo
-test-db: out/test/test-db
-test-db: doc_root = /var/task/db
-test-wp: out/test/test-wp
-test-wp: doc_root = /opt/
-
 out/test/test-echo: func = echoProvided
-out/test/test-echo: db_host = 127.0.0.1
-
 out/test/test-echo-node: func = echoNode
-out/test/test-echo-node: db_host = 127.0.0.1
-
 out/test/test-hello-node: func = helloNode
-out/test/test-hello-node: db_host = 127.0.0.1
+out/test/test-db-node: out/test/mysql.addr
+out/test/test-db-node: func = dbNode
+out/test/test-db-node: db_host = $(file < out/test/mysql.addr)
 
+out/test/test-db: out/test/mysql.addr
 out/test/test-db: func = dbProvided
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
-out/test/test-db: out/test/mysql.addr
 
-out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 out/test/test-wp: out/test/mysql.addr
+out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 
 out/test/test-%: func = functionNode
+out/test/test-%: db_host = localhost
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 
@@ -203,6 +194,7 @@ out/test/mysql.id:
 			-e MYSQL_PASSWORD=$(db_pass) \
 			-e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
 			mysql:$(mysql_version) | tee $@
+	sleep 10s # wait for DB to start
 	test -s $@
 
 out/test/mysql.addr: cont_id = $(file < out/test/mysql.id)

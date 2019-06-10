@@ -120,6 +120,36 @@ Resources:
             Path: /db/{proxy+}
             Method: ANY
 
+  dbNode:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-db-node
+      Runtime: nodejs8.10
+      CodeUri: out/func-js
+      Handler: php-cgi.handler
+      MemorySize: 256
+      Timeout: 90
+      Tracing: Active
+      Layers:
+        - arn:aws:lambda:::awslayer:AmazonLinux1803
+        - !Ref wpLayer
+        - !Ref phpLayer
+      Environment:
+        Variables:
+          DOC_ROOT: /var/task
+          DIR_INDEX: db.php
+          WP_DATABASE_PORT: !Ref dbPort
+          WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_NAME: !Ref dbName
+          WP_DATABASE_USER: !Ref dbUser
+          WP_DATABASE_PASS: !Ref dbPass
+      Events:
+        proxy:
+          Type: Api
+          Properties:
+            Path: /db-node/{proxy+}
+            Method: ANY
+
   helloNode:
     Type: AWS::Serverless::Function
     Properties:
