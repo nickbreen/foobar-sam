@@ -3,6 +3,7 @@ const {parseResponse} = require('http-string-parser');
 const MIMEType = require('whatwg-mimetype');
 const {Handler} = require('./handler');
 const AWSXRay = require("aws-xray-sdk");
+const {inspect} = require("util");
 
 function findHeader(headers, headerName)
 {
@@ -17,7 +18,6 @@ class CgiHandler extends Handler
         super(memLimit, remainingTimeInMillis);
         this.cmd = '/opt/bin/php-cgi';
         this.args = [
-//            '-c', '/opt/etc/php.ini',
             '-d', 'memory_limit=' + (this.memLimit / 2) + 'M',
             '-d', 'max_execution_time=' + Math.trunc(this.maxTime / 1000 - 5),
             '-d', 'default_mimetype=',
@@ -32,7 +32,6 @@ class CgiHandler extends Handler
             '-d', 'opcache.enable=1',
             '-d', 'enable_post_data_reading=0', // this will probably break WordPress
             '-d', 'include_path=.:/opt/php',
-            '-d', 'auto_prepend_file=handler.php',
             '-d', 'display_errors=1',
         ];
         this.opts = {
@@ -68,33 +67,26 @@ class CgiHandler extends Handler
             {
                 const php = spawnSync(this.cmd, this.args, opts);
 
-                segment.addAnnotation('php/status', php.status);
-                segment.addMetadata('php', php);
+                segment.addMetadata('php', inspect(php));
 
                 if (php.status === 0)
                 {
-                    const response = parseResponse(php.stdout.toString());
-
-                    const [, contentType] = findHeader(response.headers, 'content-type');
-                    const mimeType = MIMEType.parse(contentType);
-
-                    const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(response.body, mimeType);
-
-                    segment.addMetadata('response', response);
-                    segment.addMetadata('mimeType', mimeType);
-                    segment.addMetadata('base64Encoded', base64Encoded);
-                    segment.addMetadata('body', responseBody);
-
-                    resolve({
-                        statusCode: response.statusCode || 200,
-                        headers: response.headers,
+                    const cgiResponse = parseResponse(php.stdout.toString());
+                    const [, contentType] = findHeader(cgiResponse.headers, 'content-type');
+                    const mimeType = MIMEType.parse(contentType) || new MIMEType('application/octet-stream');
+                    const {base64Encoded, responseBody} = Handler.base64EncodeBodyIfRequired(cgiResponse.body, mimeType);
+                    const response = {
+                        statusCode: cgiResponse.statusCode || 200,
+                        headers: cgiResponse.headers,
                         body: responseBody,
                         isBase64Encoded: base64Encoded
-                    });
+                    };
+                    segment.addMetadata('response', response);
+                    resolve(response);
                 }
                 else
                 {
-                    reject(php.status);
+                    reject(inspect(php));
                 }
             });
 

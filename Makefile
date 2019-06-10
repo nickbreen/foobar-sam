@@ -42,9 +42,9 @@ out/func-js/func-js-$(version).tgz: out/func-js/npm-shrinkwrap.json
 out/%: src/%/*
 	rm -rf $@; mkdir -p $@; cp -rt $@ $^
 
-out/func-js: src/func-js/*
+out/func-js: src/func-js src/func-js/*
 	rm -rf $@; mkdir -p $@
-	tar c --exclude src/func-js/node_modules $^ | tar x --directory $@ --strip-components 2
+	tar c --exclude node_modules $^ | tar x --directory $@ --strip-components 2
 	cd $@; npm install; npm version $(version) --allow-same-version; npm shrinkwrap
 
 # Layer PHP application
@@ -146,6 +146,9 @@ test-wp: doc_root = /opt/
 out/test/test-echo: func = echoProvided
 out/test/test-echo: db_host = 127.0.0.1
 
+out/test/test-hello-node: func = helloNode
+out/test/test-hello-node: db_host = 127.0.0.1
+
 out/test/test-db: func = dbProvided
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
 out/test/test-db: out/test/mysql.addr
@@ -153,7 +156,7 @@ out/test/test-db: out/test/mysql.addr
 out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 out/test/test-wp: out/test/mysql.addr
 
-out/test/test-%: func = function
+out/test/test-%: func = functionNode
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 
@@ -218,7 +221,7 @@ kill-mysql:
 sam: out/test/sam.pid
 out/test/sam.pid: db_host = $(file < out/test/mysql.addr)
 out/test/sam.pid: sam.yaml out/test/mysql.addr
-	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug \
+	sam local start-api $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug -log-file /dev/stderr \
 			--port 3000 \
 			--skip-pull-image \
 			--template $< \
@@ -237,8 +240,8 @@ kill-sam: pid = $(file < out/test/sam.pid)
 kill-sam:
 	test -n "$(pid)" && kill -6 $(pid) && rm -f out/test/sam.pid
 
-int: url = http://localhost:3000/
 int: out/test/sam.pid out/test/int
+out/test/%: url = http://localhost:3000/
 out/test/%: src/test/* src/test/int/* $(sam_deps) FORCE
 	rm -rf $@; mkdir -p $@
 
