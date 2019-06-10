@@ -55,13 +55,14 @@ Globals:
         HttpMethod: '*'
 
 Resources:
-  wpNode:
+
+  echoProvided:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-wp
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
+      FunctionName: !Sub ${AWS::StackName}-echo-provided
+      Runtime: provided
+      CodeUri: out/func-echo
+      Handler: handler.php
       MemorySize: 256
       Timeout: 90
       Tracing: Active
@@ -69,36 +70,20 @@ Resources:
         - arn:aws:lambda:::awslayer:AmazonLinux1803
         - !Ref wpLayer
         - !Ref phpLayer
-      Environment:
-        Variables:
-          AWS_XRAY_DEBUG_MODE: TRUE
-          DOC_ROOT: !Ref documentRoot
-          DIR_INDEX: !Ref directoryIndex
-          WP_DEBUG: !Ref wpDebug
-          WP_DATABASE_PORT: !Ref dbPort
-          WP_DATABASE_HOST: !Ref dbHost
-          WP_DATABASE_NAME: !Ref dbName
-          WP_DATABASE_USER: !Ref dbUser
-          WP_DATABASE_PASS: !Ref dbPass
       Events:
-        root:
-          Type: Api
-          Properties:
-            Path: /
-            Method: GET
         proxy:
           Type: Api
           Properties:
-            Path: /{proxy+}
+            Path: /echo/{proxy+}
             Method: ANY
 
-  dbNode:
+  dbProvided:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-db-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
+      FunctionName: !Sub ${AWS::StackName}-db-provided
+      Runtime: provided
+      CodeUri: out/func-db
+      Handler: index.php
       MemorySize: 256
       Timeout: 90
       Tracing: Active
@@ -108,8 +93,6 @@ Resources:
         - !Ref phpLayer
       Environment:
         Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: db.php
           WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_HOST: !Ref dbHost
           WP_DATABASE_NAME: !Ref dbName
@@ -119,57 +102,7 @@ Resources:
         proxy:
           Type: Api
           Properties:
-            Path: /db-node/{proxy+}
-            Method: ANY
-
-  helloNode:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-hello-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
-      MemorySize: 256
-      Timeout: 90
-      Tracing: Active
-      Layers:
-        - arn:aws:lambda:::awslayer:AmazonLinux1803
-        - !Ref wpLayer
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: hello.php
-      Events:
-        proxy:
-          Type: Api
-          Properties:
-            Path: /hello-node/{proxy+}
-            Method: ANY
-
-  echoNode:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-echo-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
-      MemorySize: 256
-      Timeout: 90
-      Tracing: Active
-      Layers:
-        - arn:aws:lambda:::awslayer:AmazonLinux1803
-        - !Ref wpLayer
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: echo.php
-      Events:
-        proxy:
-          Type: Api
-          Properties:
-            Path: /echo-node/{proxy+}
+            Path: /db/{proxy+}
             Method: ANY
 
   phpLayer:

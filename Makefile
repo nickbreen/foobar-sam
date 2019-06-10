@@ -127,7 +127,7 @@ update: src/layer-wp
 src/test/event.json:
 	sam local generate-event apigateway aws-proxy > $@
 
-test: out/test/test-echo out/test/test-hello-node out/test/test-echo-node out/test/test-db-node out/test/test-wp
+test-all: out/test/test-echo out/test/test-hello out/test/test-db out/test/test-wp
 
 debug-%: DEBUG_PORT = 5858
 debug-echo: out/test/test-echo
@@ -135,15 +135,10 @@ debug-db: out/test/test-db
 debug-wp: out/test/test-wp
 debug-int: int
 
-out/test/test-echo: func = echoProvided
-out/test/test-echo-node: func = echoNode
-out/test/test-hello-node: func = helloNode
-out/test/test-db-node: out/test/mysql.addr
-out/test/test-db-node: func = dbNode
-out/test/test-db-node: db_host = $(file < out/test/mysql.addr)
-
+out/test/test-echo: func = echoNode
+out/test/test-hello: func = helloNode
 out/test/test-db: out/test/mysql.addr
-out/test/test-db: func = dbProvided
+out/test/test-db: func = dbNode
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
 
 out/test/test-wp: func = wpNode
@@ -151,13 +146,14 @@ out/test/test-wp: doc_root = /opt
 out/test/test-wp: out/test/mysql.addr
 out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 
+out/test/test-%: db_host = localhost
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 
-	test -n "$(db_host)"
-	test -n "$(db_name)"
-	test -n "$(db_user)"
-	test -n "$(db_pass)"
+	test -n "$(db_host)" # db_host
+	test -n "$(db_name)" # db_name
+	test -n "$(db_user)" # db_user
+	test -n "$(db_pass)" # db_pass
 
 	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug \
 			--skip-pull-image \
