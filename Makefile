@@ -146,11 +146,11 @@ out/test/test-db: out/test/mysql.addr
 out/test/test-db: func = dbProvided
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
 
+out/test/test-wp: func = wpNode
+out/test/test-wp: doc_root = /opt
 out/test/test-wp: out/test/mysql.addr
 out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 
-out/test/test-%: func = functionNode
-out/test/test-%: db_host = localhost
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
 

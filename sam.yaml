@@ -55,7 +55,7 @@ Globals:
         HttpMethod: '*'
 
 Resources:
-  functionNode:
+  wpNode:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
