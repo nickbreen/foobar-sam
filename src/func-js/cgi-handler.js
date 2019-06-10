@@ -55,11 +55,6 @@ class CgiHandler extends Handler
                 input: request.body
             });
 
-        AWSXRay.captureFunc('handle', (segment) =>
-        {
-            segment.addMetadata('opts', opts);
-        });
-
         return new Promise((resolve, reject) =>
         {
 
