@@ -1,10 +1,5 @@
 <?php
-ob_start( function ($buffer) {
-	header( 'Content-Length: ' . ob_get_length() );
-	header( 'Content-Type: application/json');
-
-    return json_encode((object) array("headers" => (object) array(), "body" => base64_encode($buffer), "isBase64Encoded" => true));
-} );
+header( 'Content-Type: application/json');
 
 $host = getenv( 'WP_DATABASE_HOST' );
 $user = getenv( 'WP_DATABASE_USER' );
