@@ -15,8 +15,32 @@
     }
   ],
   "config": {
+    "use-include-path": true,
     "vendor-dir": "wp-content/vendor",
-    "sort-packages": true
+    "sort-packages": true,
+    "platform": {
+      "php": "7.3.6",
+      "ext-bcmath": "7.3.6",
+      "ext-curl": "7.3.6",
+      "ext-exif": "7.3.6",
+      "ext-filter": "7.3.6",
+      "ext-fileinfo": "7.3.6",
+      "ext-mbstring": "7.3.6",
+      "ext-mysqli": "7.3.6",
+      "ext-libsodium": "7.3.6",
+      "ext-openssl": "7.3.6",
+      "ext-pcre": "7.3.6",
+      "ext-imagick": "7.3.6",
+      "ext-xml": "7.3.6",
+
+      "ext-gd": "7.3.6",
+      "ext-mcrypt": "7.3.6",
+      "ext-xmlreader": "7.3.6",
+      "ext-zlib": "7.3.6",
+
+      "ext-json": "7.3.6",
+      "ext-pcntl": "7.3.6"
+    }
   },
   "archive": {
     "exclude": [
@@ -30,30 +54,6 @@
   },
   "prefer-stable": true,
   "require": {
-    "php": "^7.1.0",
-
-    "ext-bcmath": "*",
-    "ext-curl": "*",
-    "ext-exif": "*",
-    "ext-filter": "*",
-    "ext-fileinfo": "*",
-    "ext-mbstring": "*",
-    "ext-mysqli": "*",
-    "ext-libsodium": "*",
-    "ext-openssl": "*",
-    "ext-pcre": "*",
-    "ext-imagick": "*",
-    "ext-xml": "*",
-
-    "ext-gd": "*",
-    "ext-mcrypt": "*",
-    "ext-xmlreader": "*",
-    "ext-zlib": "*",
-
-    "ext-json": "*",
-    "ext-pcntl": "*"
-  },
-  "require-dev": {
     "johnpbloch/wordpress": "^5.1.1",
     "wpackagist-theme/twentyten": "*",
     "wpackagist-theme/twentyeleven": "*",
@@ -63,7 +63,8 @@
     "wpackagist-theme/twentyfifteen": "*",
     "wpackagist-theme/twentysixteen": "*",
     "wpackagist-theme/twentyseventeen": "*",
-    "wpackagist-theme/twentynineteen": "*"
+    "wpackagist-theme/twentynineteen": "*",
+    "wpackagist-plugin/hello-dolly": "*"
   },
   "extra": {
     "wordpress-install-dir": "wp"

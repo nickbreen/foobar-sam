@@ -6,7 +6,7 @@ docker = docker run --rm \
          	--env COMPOSER_CACHE_DIR=/app/.cache/composer \
          	--user $$(id -u):$$(id -g)
 
-composer_args = --no-interaction
+composer_args = --no-interaction --ignore-platform-reqs
 
 composer = $(docker) composer $(composer_args)
 
@@ -53,6 +53,14 @@ out/layer-wp/www: src/layer-wp/composer.json src/layer-wp/composer.lock src/laye
 	rm -rf $@; mkdir -p $@; cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
+
+out/layer-wp/bin/wp: out/layer-wp/bin/wp-cli-2.2.0.phar
+	ln -sf $(notdir $<) ${@}
+	ls -l ${@D}
+
+out/layer-wp/bin/wp-cli-%.phar:
+	curl -sSfJLR -o $@ -z $@ https://github.com/wp-cli/wp-cli/releases/download/v${*}/wp-cli-${*}.phar
+	chmod +x ${@}
 
 # Layer PHP runtime
 
