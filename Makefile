@@ -17,8 +17,8 @@ version = $(shell git describe | awk -F- '{ \
 
 .PHONY: deploy clean outdated update test int acc til test-mysql kill-mysql kill-sam
 
-sam_deps = out/func-echo out/func-db out/func-js out/layer-wp out/layer-php/layer-1.d
-#			$(shell find out/func-js out/layer-wp out/layer-php/layer-1.d -name node_modules -prune -o -print)
+sam_deps = out/func-echo out/func-db out/func-js out/layer-wp/www out/layer-php/layer-1.d
+#			$(shell find out/func-js out/layer-wp/www out/layer-php/layer-1.d -name node_modules -prune -o -print)
 
 FORCE:
 
@@ -49,8 +49,8 @@ out/func-js: src/func-js src/func-js/*
 
 # Layer PHP application
 
-out/layer-wp: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php src/layer-wp/index.php
-	rm -rf $@; mkdir $@; cp -t $@ $^
+out/layer-wp/www: src/layer-wp/composer.json src/layer-wp/composer.lock src/layer-wp/wp-config.php src/layer-wp/index.php
+	rm -rf $@; mkdir -p $@; cp -t $@ $^
 	$(composer) install --working-dir=$@ --prefer-dist
 #	$(composer) config --working-dir=$@ version $(version)
 
@@ -135,14 +135,10 @@ debug-db: out/test/test-db
 debug-wp: out/test/test-wp
 debug-int: int
 
-out/test/test-echo: func = echoNode
-out/test/test-hello: func = helloNode
 out/test/test-db: out/test/mysql.addr
-out/test/test-db: func = dbNode
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
 
-out/test/test-wp: func = wpNode
-out/test/test-wp: doc_root = /opt
+out/test/test-wp: doc_root = /opt/www
 out/test/test-wp: out/test/mysql.addr
 out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 
@@ -167,7 +163,7 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 				ParameterKey=dbUser,ParameterValue=$(db_user) \
 				ParameterKey=dbPass,ParameterValue=$(db_pass) \
 				ParameterKey=wpDebug,ParameterValue=true \
-			" $(func) > $@/function.out
+			" $* > $@/function.out
 
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out

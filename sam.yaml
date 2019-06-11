@@ -55,7 +55,7 @@ Globals:
         HttpMethod: '*'
 
 Resources:
-  wpNode:
+  wp:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-wp
@@ -92,7 +92,7 @@ Resources:
             Path: /{proxy+}
             Method: ANY
 
-  dbNode:
+  db:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-db-node
@@ -122,7 +122,7 @@ Resources:
             Path: /db-node/{proxy+}
             Method: ANY
 
-  helloNode:
+  hello:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-hello-node
@@ -147,7 +147,7 @@ Resources:
             Path: /hello-node/{proxy+}
             Method: ANY
 
-  echoNode:
+  echo:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AWS::StackName}-echo-node
