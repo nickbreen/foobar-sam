@@ -30,7 +30,7 @@ describe("FileHandler", () =>
 
     console.assert(digest === 'a59fad9882bd3704e0665c96fa040626');
 
-    it("should response with file that exists", async () =>
+    it("should respond with file that exists", async () =>
     {
         const handler = new FileHandler(100, 5000);
         const response = await handler.handle(new FileRequest(fileThatExists));

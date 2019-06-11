@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const MIMEType = require('whatwg-mimetype');
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 
@@ -91,7 +92,7 @@ describe("FileRequest", () =>
         {
             const request = new FileRequest(...args);
             request.filePath.should.eql(expect.filePath);
-            request.mimeType.should.eql(expect.mimeType);
+            request.mimeType.should.eql(new MIMEType(expect.mimeType));
             request.exists().should.eventually.satisfy((exists) => exists === expect.exists);
         });
     });
