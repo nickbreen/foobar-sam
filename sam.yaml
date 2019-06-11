@@ -18,21 +18,22 @@ Parameters:
       - false
 
   dbHost:
-    Description: DB host
+    Description: DB hostname or IP address. Usually "/${AWS::StackName}/db/host"
     Type: AWS::SSM::Parameter::Value<String>
     Default: /wp/db/host
   dbPort:
+    Description: DB TCP port
     Type: Number
     Default: 3306
   dbName:
     Type: AWS::SSM::Parameter::Value<String>
-    Description: Usually "/${AWS::StackName}/db/name"
+    Description: DB database name. Usually "/${AWS::StackName}/db/name"
   dbUser:
     Type: AWS::SSM::Parameter::Value<String>
-    Description: Usually "/${AWS::StackName}/db/user"
+    Description: DB user name. Usually "/${AWS::StackName}/db/user"
   dbPass:
     Type: AWS::SSM::Parameter::Value<String>
-    Description: Usually "/${AWS::StackName}/db/password"
+    Description: DB password. Usually "/${AWS::StackName}/db/password"
     NoEcho: true
 
 Globals:
@@ -55,10 +56,10 @@ Globals:
         HttpMethod: '*'
 
 Resources:
-  wp:
+  phpCgi:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}-wp
+      FunctionName: !Sub ${AWS::StackName}-func
       Runtime: nodejs8.10
       CodeUri: out/func-js
       Handler: php-cgi.handler
@@ -75,8 +76,8 @@ Resources:
           DOC_ROOT: !Ref documentRoot
           DIR_INDEX: !Ref directoryIndex
           WP_DEBUG: !Ref wpDebug
-          WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_HOST: !Ref dbHost
+          WP_DATABASE_PORT: !Ref dbPort
           WP_DATABASE_NAME: !Ref dbName
           WP_DATABASE_USER: !Ref dbUser
           WP_DATABASE_PASS: !Ref dbPass
@@ -90,86 +91,6 @@ Resources:
           Type: Api
           Properties:
             Path: /{proxy+}
-            Method: ANY
-
-  db:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-db-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
-      MemorySize: 256
-      Timeout: 90
-      Tracing: Active
-      Layers:
-        - arn:aws:lambda:::awslayer:AmazonLinux1803
-        - !Ref wpLayer
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: db.php
-          WP_DATABASE_PORT: !Ref dbPort
-          WP_DATABASE_HOST: !Ref dbHost
-          WP_DATABASE_NAME: !Ref dbName
-          WP_DATABASE_USER: !Ref dbUser
-          WP_DATABASE_PASS: !Ref dbPass
-      Events:
-        proxy:
-          Type: Api
-          Properties:
-            Path: /db-node/{proxy+}
-            Method: ANY
-
-  hello:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-hello-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
-      MemorySize: 256
-      Timeout: 90
-      Tracing: Active
-      Layers:
-        - arn:aws:lambda:::awslayer:AmazonLinux1803
-        - !Ref wpLayer
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: hello.php
-      Events:
-        proxy:
-          Type: Api
-          Properties:
-            Path: /hello-node/{proxy+}
-            Method: ANY
-
-  echo:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AWS::StackName}-echo-node
-      Runtime: nodejs8.10
-      CodeUri: out/func-js
-      Handler: php-cgi.handler
-      MemorySize: 256
-      Timeout: 90
-      Tracing: Active
-      Layers:
-        - arn:aws:lambda:::awslayer:AmazonLinux1803
-        - !Ref wpLayer
-        - !Ref phpLayer
-      Environment:
-        Variables:
-          DOC_ROOT: /var/task
-          DIR_INDEX: echo.php
-      Events:
-        proxy:
-          Type: Api
-          Properties:
-            Path: /echo-node/{proxy+}
             Method: ANY
 
   phpLayer:

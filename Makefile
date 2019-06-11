@@ -135,6 +135,10 @@ debug-db: out/test/test-db
 debug-wp: out/test/test-wp
 debug-int: int
 
+out/test/test-hello: dir_index = hello.php
+out/test/test-echo: dir_index = echo.php
+
+out/test/test-db: dir_index = db.php
 out/test/test-db: out/test/mysql.addr
 out/test/test-db: db_host = $(file < out/test/mysql.addr)
 
@@ -142,14 +146,10 @@ out/test/test-wp: doc_root = /opt/www
 out/test/test-wp: out/test/mysql.addr
 out/test/test-wp: db_host = $(file < out/test/mysql.addr)
 
-out/test/test-%: db_host = localhost
+out/test/test-%: comma = ,
+out/test/test-%: param = $(if $(2),ParameterKey=$1$(comma)ParameterValue=$(2))
 out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 	rm -rf $@; mkdir -p $@
-
-	test -n "$(db_host)" # db_host
-	test -n "$(db_name)" # db_name
-	test -n "$(db_user)" # db_user
-	test -n "$(db_pass)" # db_pass
 
 	sam local invoke $(patsubst %,--debug-port %,$(DEBUG_PORT)) --debug \
 			--skip-pull-image \
@@ -157,13 +157,14 @@ out/test/test-%: src/test/%/expected.out $(sam_deps) src/test/event.json FORCE
 			--template sam.yaml \
 			--docker-volume-basedir . \
 			--parameter-overrides "\
-				ParameterKey=documentRoot,ParameterValue=$(doc_root) \
-				ParameterKey=dbHost,ParameterValue=$(db_host) \
-				ParameterKey=dbName,ParameterValue=$(db_name) \
-				ParameterKey=dbUser,ParameterValue=$(db_user) \
-				ParameterKey=dbPass,ParameterValue=$(db_pass) \
-				ParameterKey=wpDebug,ParameterValue=true \
-			" $* > $@/function.out
+				$(call param,documentRoot,$(doc_root)) \
+				$(call param,directoryIndex,$(dir_index)) \
+				$(call param,dbHost,$(db_host)) \
+				$(call param,dbName,$(db_name)) \
+				$(call param,dbUser,$(db_user)) \
+				$(call param,dbPass,$(db_pass)) \
+				$(call param,wpDebug,true) \
+			" phpCgi > $@/function.out
 
 	jq -r '.headers | to_entries[] | (.key + ": " + .value)' < $@/function.out
 	jq -r 'if .isBase64Encoded then .body | @base64d else .body end' < $@/function.out > $@/actual.out
